@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BuildDb>
+    <Tool>
+        <Name>linker</Name>
+        <Parent>
+            <Path>D:\Dsektop\luntui\luntui\iar\project_config\Debug_m7_0\Exe\cyt4bb7_cm_7_0.out</Path>
+            <Output>
+                <Path>D:\Dsektop\luntui\luntui\iar\Debug_m7_0\List\cyt4bb7_cm_7_0.map</Path>
+            </Output>
+        </Parent>
+        <Parent>
+            <Path>D:\seekfree\CYT4BB7_Library-master\Example\Coreboard_Demo\E02_uart_demo\iar\project_config\Debug_m7_0\Exe\cyt4bb7_cm_7_0.out</Path>
+            <Output>
+                <Path>D:\seekfree\CYT4BB7_Library-master\Example\Coreboard_Demo\E02_uart_demo\iar\Debug_m7_0\List\cyt4bb7_cm_7_0.map</Path>
+            </Output>
+        </Parent>
+    </Tool>
+</BuildDb>

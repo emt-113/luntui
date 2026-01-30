@@ -1,0 +1,21 @@
+"D:\Program Files\IAR\arm\bin\armPROC.dll" 
+
+"D:\Program Files\IAR\arm\bin\armJET.dll" 
+
+"D:\Dsektop\luntui\luntui\iar\project_config\Debug_m7_0\Exe\cyt4bb7_cm_7_0.out" 
+
+--plugin="D:\Program Files\IAR\arm\bin\armbat.dll" 
+
+--device_macro="D:\Program Files\IAR\arm/config/debugger/Infineon/CYT4BB_M7.dmac" 
+
+--device_macro="D:\Program Files\IAR\arm/config/debugger/Infineon/CYTVII_M7.dmac" 
+
+--device_macro="D:\Program Files\IAR\arm/config/debugger/Infineon/CYTVII_Trace.dmac" 
+
+--device_macro="D:\Program Files\IAR\arm/config/debugger/Infineon/CYTVII_Common.dmac" 
+
+--flash_loader="D:\Program Files\IAR\arm/config/flashloader/Infineon/FlashCYT4_CF4M_WF256K.board" 
+
+
+
+
