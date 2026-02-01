@@ -18,7 +18,7 @@ void cao()
     tft180_show_string(0,60,"left:");tft180_show_int(40,60,motor_value.receive_left_speed_data  ,4);
     tft180_show_string(0,80,"right:");tft180_show_int(40,80,motor_value.receive_right_speed_data  ,4);
     tft180_show_string(0,100,"Tar_Gyro:");tft180_show_float(60,100,g_Debug_Target_Gyro,3,1);
-    tft180_show_string(0,120,"PWM");tft180_show_int(40,120,g_Debug_PWM,4);
+    tft180_show_string(0,120,"PWM");tft180_show_int(30,120,g_Debug_PWM,4);tft180_show_int(80,120,g_Debug_PWM_temp,4);
 }
 uint8_t scheduler_task_num = 0;
 typedef struct {

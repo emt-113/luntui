@@ -25,6 +25,7 @@ extern serv_control servo_1, servo_2, servo_3, servo_4;  // 舵机控制结构�
 float g_Debug_Pitch        = 0.0f;    // 当前俯仰角 (度)
 float g_Debug_Gyro         = 0.0f;    // 当前角速度 (°/s)
 float g_Debug_Target_Gyro  = 0.0f;    // 目标角速度 (外环输出, 串级控制专用)
+int16_t g_Debug_PWM_temp        = 0; 
 int16_t g_Debug_PWM        = 0;       // 最终 PWM 输出
 uint8_t g_System_State     = SYSTEM_STATE_STOP;  // 系统状态 (0=STOP, 1=RUN)
 
@@ -239,10 +240,11 @@ void control_run_1ms(void)
     int16_t right_pwm =   (int16_t)pwm_output;
     // 发送到电机驱动
     small_driver_set_duty(left_pwm, right_pwm);
-
+    
+    g_Debug_PWM_temp=pwm_output;
     // 更新调试变量
     g_Debug_PWM = right_pwm;  // 记录左轮 PWM
-
+    
     // ============================================================
     // 7. 舵机中位锁死 (保持腿部刚度)
     // ============================================================
