@@ -17,6 +17,7 @@ quater_param_t Q_info = {1, 0, 0};
 
 
 icm_param_t icm_data;
+icm_output_t icm_output;  // 新增输出变量
 gyro_param_t GyroOffset;
 
 uint8 GyroOffset_init = 0;
@@ -92,7 +93,7 @@ void ICM_getValues()
     // 核心公式：从 Z 轴中减去 Y 轴的分量
     // 因为 k 是负数，这里实际上变成了 Z + (|k| * Y)，正好抵消掉你的反向漂移
     icm_data.gyro_z = icm_data.gyro_z - (icm_data.gyro_y * coupling_k);
-
+    icm_data.gyro_y-=0.007;
 
     // ==========================================================
     // 【死区处理】（必须放在补偿之后！）
@@ -103,7 +104,11 @@ void ICM_getValues()
     }
     // 同理，如果 X 和 Y 也有微小漂移，也可以加
     if (icm_data.gyro_x > -0.02f && icm_data.gyro_x < 0.02f) icm_data.gyro_x = 0.0f;
-    if (icm_data.gyro_y > -0.02f && icm_data.gyro_y < 0.02f) icm_data.gyro_y = 0.0f;
+    if (icm_data.gyro_y > -0.01f && icm_data.gyro_y < 0.01f) icm_data.gyro_y = 0.0f;
+    else    
+    {
+      icm_data.gyro_y=icm_data.gyro_y>=0.01f?icm_data.gyro_y-0.01:icm_data.gyro_y+0.01;
+    }
 }
 
 
@@ -193,5 +198,34 @@ void ICM_getEulerianAngles(void)
     icm_data.pitch = asin(-2 * q1 * q3 + 2 * q0 * q2) * 180 / M_PI; // pitch
     icm_data.roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2 * q2 + 1) * 180 / M_PI; // roll
     icm_data.yaw = atan2(2 * q1 * q2 + 2 * q0 * q3, -2 * q2 * q2 - 2 * q3 * q3 + 1) * 180 / M_PI;//转向角
+
+    // ==========================================================
+    // 【符号转换层】将内部数据转换为输出数据
+    // 在这里调整符号，不影响姿态解算！
+    // ==========================================================
+    icm_output.acc_x = -icm_data.acc_x;
+    icm_output.acc_y = -icm_data.acc_y;
+    icm_output.acc_z = -icm_data.acc_z;
+
+    icm_output.gyro_x = -icm_data.gyro_x;
+    icm_output.gyro_y = -icm_data.gyro_y;
+    icm_output.gyro_z = -icm_data.gyro_z;
+
+    icm_output.pitch = -icm_data.pitch;
+    icm_output.roll = -icm_data.roll;
+    icm_output.yaw = -icm_data.yaw;
+
+    // ==========================================================
+    // 【根据需要修改以下符号】
+    // 如果哪个轴反了，就在这里取反
+    // ==========================================================
+    // 示例：如果Z轴陀螺仪反了，取消下面注释
+    // icm_output.gyro_z = -icm_output.gyro_z;
+
+    // 示例：如果Z轴加速度反了，取消下面注释
+    // icm_output.acc_z = -icm_output.acc_z;
+
+    // 示例：如果yaw角反了，取消下面注释
+    // icm_output.yaw = -icm_output.yaw;
 }
 

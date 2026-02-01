@@ -41,9 +41,18 @@ uint32_t uwtick=0;
 void pit0_ch0_isr()                     // 定时器通道 0 周期中断服务函数      
 {
     pit_isr_flag_clear(PIT_CH0);
-    if (GyroOffset_init)
-    ICM_getEulerianAngles();  //陀螺仪解算角度
     uwtick++;
+    if (GyroOffset_init)
+    {
+      ICM_getEulerianAngles(); 
+      control_run_1ms();
+    }
+    //陀螺仪解算角度
+    
+    if (uwtick%2000==0)
+    {
+//      buzzer_start_beep(100);
+    }
 }
 
 void pit0_ch1_isr()                     // 定时器通道 1 周期中断服务函数      
@@ -422,7 +431,7 @@ void uart4_isr (void)
         Cy_SCB_ClearRxInterrupt(get_scb_module(UART_4), CY_SCB_UART_RX_NOT_EMPTY);              // 清除接收中断标志位
 
         
-        uart_receiver_handler();                                                                // 串口接收机回调函数
+       uart_control_callback();                                                               // 串口接收机回调函数
         
         
     }

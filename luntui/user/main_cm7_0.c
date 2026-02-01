@@ -85,8 +85,7 @@ extern uint32 fifo_data_count0;                                                 
 extern fifo_struct uart_data_fifo;
 
 
-uint32 count = 0;
-    float battery_voltage = 12.6f;
+
 int main(void)
 {
     clock_init(SYSTEM_CLOCK_250M); 	// 时钟配置及系统初始化<务必保留>
@@ -95,16 +94,28 @@ int main(void)
 //    interrupt_set_priority(CPUIntIdx2_IRQn, 1);                                    // 设置 PIT 周期中断的中断优先级为 1（由于独特的中断查询方式，所有PIT中断都是用的一个中断向量）
     imu660rb_init();
     gyroOffset_init();
-    printf("111");
-    timer_init(TC_TIME2_CH0, TIMER_MS);
-    timer_start(TC_TIME2_CH0);
-    fifo_init(&uart_data_fifo, FIFO_DATA_8BIT, uart_get_data, 64);              // 初始化 fifo 挂载缓冲区
+    beep_init();
+    
+    tft180_init();
+    tft180_set_font(TFT180_8X16_FONT);
+    tft180_set_color(RGB565_BLACK,RGB565_WHITE);
 
+    fifo_init(&uart_data_fifo, FIFO_DATA_8BIT, uart_get_data, 64);              // 初始化 fifo 挂载缓冲区
     uart_init(UART_INDEX, UART_BAUDRATE, UART_TX_PIN, UART_RX_PIN);             // 初始化串口
     uart_rx_interrupt(UART_INDEX, 1);                                           // 开启 UART_INDEX 的接收中断
+    
+    Servo_Init();
+    small_driver_uart_init();//无刷驱动初始化
+    small_driver_get_speed();//串口发送命令获取无刷速度
+//    small_driver_set_duty(600,-600);//后退
+    control_init();
+    
+    timer_init(TC_TIME2_CH0, TIMER_MS);
+    timer_start(TC_TIME2_CH0);
     pit_ms_init(PIT_CH0, 1); 
-    printf("666");
+    interrupt_set_priority(CPUIntIdx3_IRQn, 2);
     scheduler_init();
+
     // 此处编写用户代码 例如外设初始化代码等
     while(true)
     {

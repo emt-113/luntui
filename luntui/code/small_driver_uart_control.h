@@ -2,7 +2,8 @@
 #define SMALL_DRIVER_UART_CONTROL_H_
 
 #include "zf_common_headfile.h"
-
+//备注   small_driver_set_duty(600,-600);//后退
+//即 左轮为负数是前进，右轮为正是前进
 
 #define SMALL_DRIVER_UART                       (UART_4        )
 

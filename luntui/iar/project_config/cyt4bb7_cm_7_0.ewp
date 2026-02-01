@@ -1116,7 +1116,19 @@
     <group>
         <name>code</name>
         <file>
+            <name>$PROJ_DIR$\..\..\code\beep.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\beep.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\bsp_app.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\control.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\control.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\filt.c</name>
@@ -1125,10 +1137,40 @@
             <name>$PROJ_DIR$\..\..\code\filt.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\function.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\function.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\moter.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\moter.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\pid.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\pid.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\scheduler.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\scheduler.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\Servo.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\Servo.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\small_driver_uart_control.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\small_driver_uart_control.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\uart.c</name>

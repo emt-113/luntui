@@ -1,0 +1,25 @@
+D:\Dsektop\luntui\luntui\iar\Debug_m7_0\BrowseInfo\zf_device_6570275422786408770.dir\zf_device_tft180.pbi: \
+  D:\Dsektop\luntui\libraries\zf_device\zf_device_tft180.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_driver\zf_driver_spi.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_driver\zf_driver_gpio.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_driver\zf_driver_soft_spi.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_driver\zf_driver_delay.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_common\zf_common_function.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_common\zf_common_font.h \
+  D:\Program\ Files\IAR\arm\inc\c\DLib_Product_stdlib.h \
+  D:\Program\ Files\IAR\arm\inc\c\ycheck.h \
+  D:\Program\ Files\IAR\arm\inc\c\stdlib.h \
+  D:\Program\ Files\IAR\arm\inc\c\DLib_Product_string.h \
+  D:\Program\ Files\IAR\arm\inc\c\string.h \
+  D:\Program\ Files\IAR\arm\inc\c\stdarg.h \
+  D:\Program\ Files\IAR\arm\inc\c\stdbool.h \
+  D:\Program\ Files\IAR\arm\inc\c\stdint.h \
+  D:\Program\ Files\IAR\arm\inc\c\ysizet.h \
+  D:\Program\ Files\IAR\arm\inc\c\DLib_Product.h \
+  D:\Program\ Files\IAR\arm\inc\c\DLib_Config_Normal.h \
+  D:\Program\ Files\IAR\arm\inc\c\DLib_Defaults.h \
+  D:\Program\ Files\IAR\arm\inc\c\yvals.h \
+  D:\Program\ Files\IAR\arm\inc\c\stdio.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_common\zf_common_typedef.h \
+  D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_common\zf_common_debug.h \
+  D:\Dsektop\luntui\libraries\zf_device\zf_device_tft180.c
