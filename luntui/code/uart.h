@@ -3,6 +3,7 @@
 #include "bsp_app.h"
 void uart_task();
 void uart_printf(uart_index_enum uart_n, const char *format, ...);
+void dongdao_8();
 #endif 
 
 

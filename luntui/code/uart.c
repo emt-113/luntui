@@ -46,6 +46,38 @@ void uart_task()
             uart_printf(UART_INDEX, fifo_get_data, fifo_data_count);      // 将读取到的数据发送出去
         }
 }
+extern float gao;
+extern float angle;
+void dongdao_8()
+{
+        seekfree_assistant_data_analysis();
+        // 遍历
+        for(uint8_t i = 0; i < SEEKFREE_ASSISTANT_SET_PARAMETR_COUNT; i++)
+        {
+            // 更新标志位
+            if(seekfree_assistant_parameter_update_flag[i])
+            {
+                seekfree_assistant_parameter_update_flag[i] = 0;
+
+                // 通过DEBBUG串口发送信息
+                printf("receive data channel : %d ", i);
+                printf("data : %f ", seekfree_assistant_parameter[i]);
+                printf("\r\n");
+                if (i==0)
+                {
+                  gao =seekfree_assistant_parameter[0];
+                  VMC_Update_All_Servos(gao,angle);
+                }
+                else if (i==1)
+                {
+                  angle =seekfree_assistant_parameter[1];
+                  VMC_Update_All_Servos(gao,angle);  
+                }
+                
+                
+            }
+        }
+}
 
 
 

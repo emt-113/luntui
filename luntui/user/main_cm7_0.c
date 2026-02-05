@@ -95,6 +95,7 @@ int main(void)
     imu660rb_init();
     gyroOffset_init();
     beep_init();
+    my_key_init();
     
     tft180_init();
     tft180_set_font(TFT180_8X16_FONT);
@@ -109,7 +110,8 @@ int main(void)
     small_driver_get_speed();//串口发送命令获取无刷速度
 //    small_driver_set_duty(600,-600);//后退
     control_init();
-    
+     seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_DEBUG_UART);
+     
     timer_init(TC_TIME2_CH0, TIMER_MS);
     timer_start(TC_TIME2_CH0);
     pit_ms_init(PIT_CH0, 1); 
@@ -139,10 +141,11 @@ int main(void)
 void uart_rx_interrupt_handler (void)
 {
 //    get_data = uart_read_byte(UART_INDEX);                                      // 接收数据 while 等待式 不建议在中断使用
-    if(uart_query_byte(UART_INDEX, &get_data))                                  // 接收数据 查询式 有数据会返回 TRUE 没有数据会返回 FALSE
-    {
-        fifo_write_buffer(&uart_data_fifo, &get_data, 1);                       // 将数据写入 fifo 中
-    }
+//    if(uart_query_byte(UART_INDEX, &get_data))                                  // 接收数据 查询式 有数据会返回 TRUE 没有数据会返回 FALSE
+//    {
+//        fifo_write_buffer(&uart_data_fifo, &get_data, 1);                       // 将数据写入 fifo 中
+//
+//    }
 }
 
 // **************************** 代码区域 ****************************

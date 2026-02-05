@@ -12,6 +12,8 @@
 #include "moter.h"
 #include "pid.h"
 #include "control.h"
+#include "vmc.h"
+#include "key_app.h"
 extern uint32_t uwtick;
 #endif 
 

@@ -1143,6 +1143,12 @@
             <name>$PROJ_DIR$\..\..\code\function.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\key_app.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\key_app.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\moter.c</name>
         </file>
         <file>
@@ -1177,6 +1183,12 @@
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\uart.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\vmc.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\vmc.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>

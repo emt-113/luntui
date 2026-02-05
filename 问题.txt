@@ -1,0 +1,47 @@
+# Role
+你是一个嵌入式C语言开发专家。请基于我现有的项目结构，编写速度环控制代码。**代码必须使用 UTF-8 编码**。
+
+# Context
+我正在开发一个V型五连杆轮腿机器人。
+- **control.c/.h**: 核心控制层。
+- **pid.c/.h**: 现有的PID库。
+- **Servo.c/.h**: 包含 `VMC_Update_All_Servos(height, angle)`。
+- **moter.h**: 包含 `motor_value` 结构体用于读取速度。
+
+# Requirements
+
+请修改 `control.h` 和 `control.c`，具体要求如下：
+
+## 1. control.h (宏定义与声明)
+- **宏定义**:
+  - `SPEED_KP`, `SPEED_KI`, `SPEED_KD`：全部初始化为 **0** (方便后续调试)。
+  - `SPEED_OUT_MAX`：定义为 **20.0f** (VMC角度物理限制)。
+  - `SPEED_INT_MAX`：定义积分限幅 (例如 5.0f)。
+  - `FIXED_HEIGHT`：定义为 **4.4f** (固定车身高度)。
+- **声明**:
+  - `extern pid_struct_t speed_pid;`
+  - `void speed_control_run(void);`
+
+## 2. control.c (核心实现)
+- **全局变量**: 定义 `speed_pid` 和滤波后的速度变量。
+- **辅助函数**: 
+  - 实现速度低通滤波: (motor_value.receive_left_speed_data + motor_value.receive_right_speed_data) / 2.0f``，系数建议 0.3。
+- **修改 control_init()**:
+  - 在函数末尾 **添加** 速度环PID的初始化代码 `pid_init(...)`，使用头文件中的宏。
+- **新建 speed_control_run()**:
+  - **频率控制**: 使用 `if (uwtick % 20 == 0)` 判断执行时机 (假设 uwtick 为全局毫秒计数变量)。
+  - **逻辑流程**:
+    1. 计算平均速度并进行滤波。
+    2. 计算PID: `pid_compute`，目标速度为用户设定值(暂定0)，测量值为滤波后速度。
+    3. **输出限幅**: 结果必须限制在 `[-SPEED_OUT_MAX, SPEED_OUT_MAX]` 范围内。
+    4. **执行VMC**: 
+       - 如果 `g_System_State == SYSTEM_STATE_RUN`: 调用 `VMC_Update_All_Servos(FIXED_HEIGHT, pid_output)`。
+       - 如果是其他状态: 重置PID积分，或者归中舵机。
+
+# Code Implementation Request
+
+请直接给出 `control.h` 和 `control.c` 的修改/新增部分代码。
+1. **control.h**: 展示宏定义和声明。
+2. **control.c**: 展示 `speed_control_run` 函数完整实现，以及 `control_init` 中添加的部分。
+
+请保持代码简洁，变量命名清晰。
