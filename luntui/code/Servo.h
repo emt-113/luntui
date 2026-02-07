@@ -39,7 +39,7 @@ extern serv_control servo_1;
 extern serv_control servo_2;
 extern serv_control servo_3;
 extern serv_control servo_4;
-
+extern int8_t MAX_PWM_STEP;
 void Servo_Init(void);
 
 void set_servo_duty(serv_control *servo, int16 duty);

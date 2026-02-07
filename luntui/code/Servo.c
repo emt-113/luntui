@@ -114,7 +114,7 @@ void shi()
  *   定义MAX_PWM_STEP宏，限制每次PWM变化的最大步长
  *   使用static数组记忆上一次的PWM值，实现平滑过渡
  */
-#define MAX_PWM_STEP 55  // PWM每帧最大变化量，可根据实际效果调整（推荐值：100-200）//45
+int8_t MAX_PWM_STEP = 55 ; // PWM每帧最大变化量，可根据实际效果调整（推荐值：100-200）//45
 
 void VMC_Update_All_Servos(float gao, float angle)
 {

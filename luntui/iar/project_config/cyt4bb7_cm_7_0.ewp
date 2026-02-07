@@ -1116,6 +1116,12 @@
     <group>
         <name>code</name>
         <file>
+            <name>$PROJ_DIR$\..\..\code\auto_menu.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\auto_menu.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\beep.c</name>
         </file>
         <file>

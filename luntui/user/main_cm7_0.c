@@ -96,10 +96,7 @@ int main(void)
     gyroOffset_init();
     beep_init();
     my_key_init();
-    
-    tft180_init();
-    tft180_set_font(TFT180_8X16_FONT);
-    tft180_set_color(RGB565_BLACK,RGB565_WHITE);
+    my_menu_init();
 
     fifo_init(&uart_data_fifo, FIFO_DATA_8BIT, uart_get_data, 64);              // 初始化 fifo 挂载缓冲区
     uart_init(UART_INDEX, UART_BAUDRATE, UART_TX_PIN, UART_RX_PIN);             // 初始化串口

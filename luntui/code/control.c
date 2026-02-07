@@ -9,6 +9,7 @@
  * *****************************************************************************
  */
 #include "control.h"
+#include "bsp_app.h"  // 需要获取 uwtick 等全局变量定义
 
 /* ========================================================================
  * 外部变量引用
@@ -27,22 +28,23 @@ float g_Debug_Gyro         = 0.0f;    // 当前角速度 (°/s)
 float g_Debug_Target_Gyro  = 0.0f;    // 目标角速度 (外环输出, 串级控制专用)
 int16_t g_Debug_PWM_temp        = 0;
 int16_t g_Debug_PWM        = 0;       // 最终 PWM 输出
-uint8_t g_System_State     = SYSTEM_STATE_STOP;  // 系统状态 (0=STOP, 1=RUN)
+int8_t g_System_State     = SYSTEM_STATE_STOP;  // 系统状态 (0=STOP, 1=RUN)
 float mECHANICAL_ZERO  = MECHANICAL_ZERO;
+int8_t speed_flag   = 0;
 // ============================================================
 // 速度环调试变量
 // ============================================================
 float g_Debug_Target_Speed   = 0.0f;   // 速度环目标速度 (外部设置,暂定0)
 float g_Debug_Measure_Speed  = 0.0f;   // 速度环测量速度 (滤波后)
 float g_Debug_Speed_Output   = 0.0f;   // 速度环PID输出 (VMC角度)
-
+uint8_t DEAD_ZONE=60;
 /* ========================================================================
  * 私有变量
  * ======================================================================== */
 
-static pid_struct_t balance_angle_pid;  // 外环 - 角度环 PID 控制器
-static pid_struct_t balance_gyro_pid;   // 内环 - 角速度环 PID 控制器
-static pid_struct_t speed_pid;          // 速度环 PID 控制器
+ pid_struct_t balance_angle_pid;  // 外环 - 角度环 PID 控制器
+ pid_struct_t balance_gyro_pid;   // 内环 - 角速度环 PID 控制器
+ pid_struct_t speed_pid;          // 速度环 PID 控制器
 static uint32_t recovery_counter = 0;   // 自动恢复计数器
 static float speed_filtered = 0.0f;     // 滤波后的速度 (一阶低通)
 
@@ -183,7 +185,7 @@ void control_run_1ms(void)
      * - 当车后仰 (Pitch > -10.6) → Error < 0 → 需要负向角速度来修正
      * - 当车前倾 (Pitch < -10.6) → Error > 0 → 需要正向角速度来修正
      */
-    if (uwtick % 20 == 0)
+    if (uwtick % 20 == 0 && speed_flag == 1)
     {
       speed_control_run();
     }
@@ -232,6 +234,7 @@ void control_run_1ms(void)
      * - Left_PWM  =  (int16_t)PWM_Out
      * - Right_PWM = -(int16_t)PWM_Out
      */
+    g_Debug_PWM_temp=pwm_output;
     if (pwm_output > 0) 
     {
         pwm_output += DEAD_ZONE; // 正向转动，加上死区值
@@ -245,7 +248,7 @@ void control_run_1ms(void)
     // 发送到电机驱动
     small_driver_set_duty(left_pwm, right_pwm);
     
-    g_Debug_PWM_temp=pwm_output;
+    
     // 更新调试变量
     g_Debug_PWM = right_pwm;  // 记录左轮 PWM
     

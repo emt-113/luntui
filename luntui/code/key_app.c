@@ -1,4 +1,5 @@
 #include "key_app.h"
+#include "auto_menu.h"          // 引入菜单系统
 
 #define KEY1                    (P20_0)
 #define KEY2                    (P20_1)
@@ -33,11 +34,13 @@ uint8_t key_read()
     }
     if (gpio_get_level(KEY4)==0)
     {
-        keu_val =4;//清空
+        keu_val =4;
     }
     return keu_val;
 }
-extern uint8_t start_flag;
+uint8_t g_menu_enabled = 1;
+// 菜单系统全局开关 (可根据需要开启/关闭菜单功能)
+extern uint8_t g_menu_enabled;  // 在 main_cm7_0.c 中定义并初始化
 
 void key_task()
 {
@@ -48,18 +51,16 @@ void key_task()
 	key_down= key_val & (key_val^key_old);
 	key_up = ~key_val & (key_val^key_old);
 	key_old = key_val;
-        if (key_down==4)
+
+        // 菜单系统集成：检测到按键按下时直接调用 Menu_Key_Handler
+        if (g_menu_enabled)
         {
-          start_flag=!start_flag;
-          g_System_State=start_flag;
+            if (key_down != 0)
+            {
+                Menu_Key_Handler(key_down);  // 直接传递按键值到菜单系统
+            }
         }
-        if (key_down==1)
-        {
-          g_Debug_Target_Speed+=5;
-        }
-        if (key_down==2)
-        {
-          g_Debug_Target_Speed-=5;
-        }
+
+
 }
 

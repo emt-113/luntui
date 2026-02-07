@@ -1,47 +1,81 @@
-# Role
-你是一个嵌入式C语言开发专家。请基于我现有的项目结构，编写速度环控制代码。**代码必须使用 UTF-8 编码**。
+角色设定： 你是一名精通嵌入式 C 语言开发的工程师，熟悉 Infineon CYT4BB 平台和 IAR 开发环境。我需要你基于现有的屏幕驱动，实现一个通用多级菜单框架。
 
-# Context
-我正在开发一个V型五连杆轮腿机器人。
-- **control.c/.h**: 核心控制层。
-- **pid.c/.h**: 现有的PID库。
-- **Servo.c/.h**: 包含 `VMC_Update_All_Servos(height, angle)`。
-- **moter.h**: 包含 `motor_value` 结构体用于读取速度。
+项目文件结构：
 
-# Requirements
+驱动头文件：D:\Dsektop\luntui\libraries\zf_device\zf_device_tft180.h (已提供 API)
 
-请修改 `control.h` 和 `control.c`，具体要求如下：
+字体颜色：D:\Dsektop\luntui\libraries\zf_common\zf_common_font.h
 
-## 1. control.h (宏定义与声明)
-- **宏定义**:
-  - `SPEED_KP`, `SPEED_KI`, `SPEED_KD`：全部初始化为 **0** (方便后续调试)。
-  - `SPEED_OUT_MAX`：定义为 **20.0f** (VMC角度物理限制)。
-  - `SPEED_INT_MAX`：定义积分限幅 (例如 5.0f)。
-  - `FIXED_HEIGHT`：定义为 **4.4f** (固定车身高度)。
-- **声明**:
-  - `extern pid_struct_t speed_pid;`
-  - `void speed_control_run(void);`
+菜单源码：D:\Dsektop\luntui\luntui\code\auto_menu.c (需要编写)
 
-## 2. control.c (核心实现)
-- **全局变量**: 定义 `speed_pid` 和滤波后的速度变量。
-- **辅助函数**: 
-  - 实现速度低通滤波: (motor_value.receive_left_speed_data + motor_value.receive_right_speed_data) / 2.0f``，系数建议 0.3。
-- **修改 control_init()**:
-  - 在函数末尾 **添加** 速度环PID的初始化代码 `pid_init(...)`，使用头文件中的宏。
-- **新建 speed_control_run()**:
-  - **频率控制**: 使用 `if (uwtick % 20 == 0)` 判断执行时机 (假设 uwtick 为全局毫秒计数变量)。
-  - **逻辑流程**:
-    1. 计算平均速度并进行滤波。
-    2. 计算PID: `pid_compute`，目标速度为用户设定值(暂定0)，测量值为滤波后速度。
-    3. **输出限幅**: 结果必须限制在 `[-SPEED_OUT_MAX, SPEED_OUT_MAX]` 范围内。
-    4. **执行VMC**: 
-       - 如果 `g_System_State == SYSTEM_STATE_RUN`: 调用 `VMC_Update_All_Servos(FIXED_HEIGHT, pid_output)`。
-       - 如果是其他状态: 重置PID积分，或者归中舵机。
+菜单头文件：D:\Dsektop\luntui\luntui\code\auto_menu.h (需要编写)
 
-# Code Implementation Request
+按键处理：D:\Dsektop\luntui\luntui\code\key_app.c (需要修改)
 
-请直接给出 `control.h` 和 `control.c` 的修改/新增部分代码。
-1. **control.h**: 展示宏定义和声明。
-2. **control.c**: 展示 `speed_control_run` 函数完整实现，以及 `control_init` 中添加的部分。
+调度器：D:\Dsektop\luntui\luntui\code\scheduler.c (需要集成)
 
-请保持代码简洁，变量命名清晰。
+已有的屏幕 API (zf_device_tft180.h)：
+
+C
+void tft180_show_string(uint16 x, uint16 y, const char dat[]);
+void tft180_show_int(uint16 x, uint16 y, const int32 dat, uint8 num);   // 显示 int32
+void tft180_show_uint(uint16 x, uint16 y, const uint32 dat, uint8 num); // 显示 uint32
+void tft180_show_float(uint16 x, uint16 y, const double dat, uint8 num, uint8 pointnum); // 显示 double
+void tft180_set_color(const uint16 pen, const uint16 bgcolor); // 设置颜色
+void tft180_clear(void); // 清屏
+// 宏定义颜色：RGB565_RED, RGB565_GREEN, RGB565_WHITE, RGB565_BLUE 等
+需求详情：
+
+1. 数据结构设计 (auto_menu.h) 请定义一个支持 int, uint, float 和 ReadOnly 类型的通用结构体 MenuItem。
+
+成员应包含：显示名称(Label)、变量指针(void*)、数据类型枚举、步进值(Step)、最大值(Max)、最小值(Min)、确认回调函数指针。
+
+菜单层级为两级：一级为分类(Page)，二级为具体条目(Item)。
+
+2. 核心逻辑 (auto_menu.c) 系统通过状态机运行，分为 NAV_MODE (浏览) 和 EDIT_MODE (编辑)。请实现两个核心函数：
+
+void Menu_Key_Handler(uint8_t key_val)：
+
+此函数由按键任务直接触发，不包含耗时的屏幕刷新代码。
+
+按键定义：1=上, 2=下, 3=确认, 4=退出/返回。
+
+确认键 (3)：
+
+浏览模式 -> 编辑模式：备份当前值到 backup_val，状态置为 EDIT。
+
+编辑模式 -> 浏览模式：执行回调函数（如保存参数），状态置为 NAV。
+
+退出键 (4)：
+
+编辑模式 -> 浏览模式：执行数据回滚 (将 *ptr 恢复为 backup_val)，不保存，状态置为 NAV。
+
+二级菜单 -> 一级菜单：返回上一级。
+
+上/下键 (1/2)：
+
+浏览模式：移动光标索引。
+
+编辑模式：实时修改 *ptr 指向的变量值（val += step），并进行限幅处理。
+
+void Menu_Refresh_Task(void)：
+
+此函数由调度器定时调用（如 100ms 一次）。
+
+负责 UI 渲染。
+
+交互细节：
+
+浏览时：光标为 >，数值颜色正常。
+
+编辑时：光标为 *，数值变为绿色 (RGB565_GREEN) 提示正在修改。
+
+只刷新当前页面的数据，避免全屏闪烁。
+
+3. 代码集成
+
+在 key_app.c 的 key_task 中，直接在检测到按键按下 (key_down == x) 时调用 Menu_Key_Handler(x)。
+
+在 scheduler.c 中展示如何添加 Menu_Refresh_Task。
+
+输出要求： 请给出 auto_menu.h 和 auto_menu.c 的完整代码，以及 key_app.c 和 scheduler.c 的修改片段。代码必须适配 IAR 环境，变量类型使用标准库（如 uint8 需转为 uint8_t 或适配库中的定义）。

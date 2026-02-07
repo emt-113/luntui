@@ -26,8 +26,8 @@
 #ifndef CODE_CONTROL_H_
 #define CODE_CONTROL_H_
 
-#include "bsp_app.h"
-#include "pid.h"
+#include "pid.h"      // 必须先包含 pid.h（pid_struct_t 定义）
+#include "zf_common_headfile.h"  // 底层头文件
 
 /* ========================================================================
  * 硬件参数宏定义
@@ -78,7 +78,7 @@
  *
  * @note DEAD_ZONE 
  */
-#define DEAD_ZONE 180// 定义死区补偿值 (根据你的实测230，建议设为210左右，避免原地高频震荡)
+extern uint8_t DEAD_ZONE ;// 定义死区补偿值 (根据你的实测230，建议设为210左右，避免原地高频震荡)
 
 /* ========================================================================
  * PID 参数宏定义 (串级双环控制)
@@ -101,7 +101,7 @@
  *       - 先调节此参数,使小车能够勉强维持直立
  *       - 过大会导致振荡,过小响应太慢
  */
-#define ANGLE_KP                   (3.465f)//3.265
+#define ANGLE_KP                   (3.465f)//3.465
 
 /**
  * @brief 角度环微分系数
@@ -112,7 +112,7 @@
  *
  *       注意: 角度环一般不需要太大的 D 项
  */
-#define ANGLE_KD                   (0.08f)//0.002
+#define ANGLE_KD                   (0.06f)//0.002
 
 /**
  * @brief 角度环积分系数
@@ -121,7 +121,7 @@
  *       初始值设为 0.0f，一般不需要积分
  *       保留接口供特殊场景使用
  */
-#define ANGLE_KI                   (0.0f)
+#define ANGLE_KI                   (0)
 
 // ============================================================
 // 内环 - 角速度环 (Gyro Loop / Inner Loop)
@@ -141,7 +141,7 @@
  *       - 此参数影响系统的阻尼特性
  *       - 过大会导致高频振荡,过小响应慢
  */
-#define GYRO_KP                   (195)// (224.0f)
+#define GYRO_KP                   (224)// (224.0f)
 
 /**
  * @brief 角速度环微分系数
@@ -183,7 +183,7 @@
  *       初始值设为 0.0f，需要从 0 开始逐步增加调试
  *       典型范围: 0.1 ~ 5.0
  */
-#define SPEED_KP                  (0.12)//0.08
+#define SPEED_KP                  (0.12f)//0.08xianzai 0.12
 
 /**
  * @brief 速度环积分系数
@@ -201,7 +201,7 @@
  *       初始值设为 0.0f，根据调试效果调整
  *       典型范围: 0.0 ~ 0.5
  */
-#define SPEED_KD                  (0.06f)//0.02
+#define SPEED_KD                  (0.06f)//0.02//xianzai 0.06
 
 /**
  * @brief 速度环输出限幅 (VMC 角度限制)
@@ -210,7 +210,7 @@
  *       限制在 ±20° 范围内,防止姿态失控
  *       单位: 度 (°)
  */
-#define SPEED_OUT_MAX             (30.0f)
+#define SPEED_OUT_MAX             (25.0f)
 #define SPEED_OUT_MIN             (-30.0f)
 
 /**
@@ -219,7 +219,7 @@
  * @note 防止积分饱和
  *       单位: 速度*时间累积量
  */
-#define SPEED_INT_MAX             (1.0f)
+#define SPEED_INT_MAX             (4.0f)
 
 /**
  * @brief 固定车身高度 (VMC控制)
@@ -240,6 +240,31 @@ typedef enum {
     SYSTEM_STATE_STOP = 0,         /**< 停机状态 (异常保护或未启动) */
     SYSTEM_STATE_RUN  = 1          /**< 运行状态 (正常平衡控制) */
 } system_state_enum_t;
+
+/* ========================================================================
+ * PID控制器声明 (供外部调参使用)
+ * ======================================================================== */
+
+/**
+ * @brief 外环 - 角度环 PID 控制器
+ *
+ * @note 用于外部串口调参
+ */
+extern pid_struct_t balance_angle_pid;
+
+/**
+ * @brief 内环 - 角速度环 PID 控制器
+ *
+ * @note 用于外部串口调参
+ */
+extern pid_struct_t balance_gyro_pid;
+
+/**
+ * @brief 速度环 PID 控制器
+ *
+ * @note 用于外部串口调参
+ */
+extern pid_struct_t speed_pid;
 
 /* ========================================================================
  * 全局调试变量
@@ -273,7 +298,7 @@ extern int16_t g_Debug_PWM;
  *
  * @note 用于外部串口任务观测和 LED 指示
  */
-extern uint8_t g_System_State;
+extern int8_t g_System_State;
 
 /**
  * @brief 外环输出 - 目标角速度 (串级控制专用)
@@ -285,6 +310,7 @@ extern float g_Debug_Target_Gyro;
 
 extern int16_t g_Debug_PWM_temp;
 extern float mECHANICAL_ZERO;
+extern int8_t speed_flag;
 // ============================================================
 // 速度环调试变量
 // ============================================================

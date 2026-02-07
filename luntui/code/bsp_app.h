@@ -9,11 +9,11 @@
 #include "function.h"
 #include "beep.h"
 #include "Servo.h"
-#include "moter.h"
-#include "pid.h"
-#include "control.h"
+#include "pid.h"           // pid.h 必须在 control.h 之前
+#include "control.h"       // control.h 依赖 pid.h
 #include "vmc.h"
 #include "key_app.h"
+#include "auto_menu.h"
 extern uint32_t uwtick;
 #endif 
 

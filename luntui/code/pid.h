@@ -24,7 +24,7 @@
 #ifndef CODE_PID_H_
 #define CODE_PID_H_
 
-#include "bsp_app.h"
+#include "zf_common_headfile.h"  // 只包含必要的底层头文件
 
 /* ========================================================================
  * PID 结构体定义
