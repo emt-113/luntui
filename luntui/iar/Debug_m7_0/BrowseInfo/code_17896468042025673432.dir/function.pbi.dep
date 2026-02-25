@@ -1,7 +1,7 @@
-D:\Dsektop\luntui\luntui\iar\Debug_m7_0\BrowseInfo\code_17896468042025673432.dir\control.pbi: \
-  D:\Dsektop\luntui\luntui\code\control.c \
-  D:\Dsektop\luntui\luntui\code\control.h \
-  D:\Dsektop\luntui\luntui\code\pid.h \
+D:\Dsektop\luntui\luntui\iar\Debug_m7_0\BrowseInfo\code_17896468042025673432.dir\function.pbi: \
+  D:\Dsektop\luntui\luntui\code\function.c \
+  D:\Dsektop\luntui\luntui\code\function.h \
+  D:\Dsektop\luntui\luntui\code\bsp_app.h \
   D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_common\zf_common_headfile.h \
   D:\Program\ Files\IAR\arm\inc\c\stdio.h \
   D:\Program\ Files\IAR\arm\inc\c\ycheck.h \
@@ -225,15 +225,15 @@ D:\Dsektop\luntui\luntui\iar\Debug_m7_0\BrowseInfo\code_17896468042025673432.dir
   D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_device\zf_device_wireless_uart.h \
   D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_components\seekfree_assistant.h \
   D:\Dsektop\luntui\luntui\iar\project_config\..\..\..\libraries\zf_components\seekfree_assistant_interface.h \
-  D:\Dsektop\luntui\luntui\code\bsp_app.h \
   D:\Dsektop\luntui\luntui\code\scheduler.h \
   D:\Dsektop\luntui\luntui\code\uart.h \
   D:\Dsektop\luntui\luntui\code\filt.h \
   D:\Dsektop\luntui\luntui\code\small_driver_uart_control.h \
   D:\Dsektop\luntui\luntui\code\moter.h \
-  D:\Dsektop\luntui\luntui\code\function.h \
   D:\Dsektop\luntui\luntui\code\beep.h \
   D:\Dsektop\luntui\luntui\code\Servo.h \
+  D:\Dsektop\luntui\luntui\code\pid.h \
+  D:\Dsektop\luntui\luntui\code\control.h \
   D:\Dsektop\luntui\luntui\code\vmc.h \
   D:\Dsektop\luntui\luntui\code\key_app.h \
   D:\Dsektop\luntui\luntui\code\auto_menu.h

@@ -30,7 +30,7 @@ int16_t g_Debug_PWM_temp        = 0;
 int16_t g_Debug_PWM        = 0;       // 最终 PWM 输出
 int8_t g_System_State     = SYSTEM_STATE_STOP;  // 系统状态 (0=STOP, 1=RUN)
 float mECHANICAL_ZERO  = MECHANICAL_ZERO;
-int8_t speed_flag   = 0;
+int8_t speed_flag   = 1;
 // ============================================================
 // 速度环调试变量
 // ============================================================
