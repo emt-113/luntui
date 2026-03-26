@@ -204,7 +204,6 @@ void gpio_5_exti_isr()                  // 外部 GPIO_5 中断服务函数
 
 void gpio_6_exti_isr()                  // 外部 GPIO_6 中断服务函数     
 {
-	
 
 
 }

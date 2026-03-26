@@ -17,9 +17,13 @@
 #include "auto_menu.h"
 #include "filt.h"  // 引入 icm_output_t 定义
 #include <string.h>
+#include <stdint.h>
 
 //================================================= 全局变量 ==================================================
 static menu_system_t g_menu = {0};
+static uint8_t g_ro_cache_valid[MENU_MAX_ITEMS_PER_PAGE] = {0};
+static int64_t g_ro_cache_scaled[MENU_MAX_ITEMS_PER_PAGE] = {0};
+static uint8_t g_ro_cache_page = 0xFF;
 
 
  static int32_t speed_kp = 100;
@@ -29,8 +33,10 @@ static menu_system_t g_menu = {0};
 
   // 外部变量声明（实时数据显示）
   extern icm_output_t icm_output;
-  extern int8_t g_System_State;         // 系统状态变量 (int8_t类型,非int32_t!)
-  extern pid_struct_t balance_gyro_pid; // 陀螺仪环PID控制器
+	  extern int8_t g_System_State;         // 系统状态变量 (int8_t类型,非int32_t!)
+	  extern pid_struct_t balance_gyro_pid; // 陀螺仪环PID控制器
+	  extern float g_Debug_Roll_Display;    // 横滚角显示值(已补偿)
+	  extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值
 
   // 定义确认回调函数 (保存参数到 Flash 等)
   void save_pid_params(void)
@@ -50,14 +56,14 @@ static menu_system_t g_menu = {0};
   static menu_item_t sensor_items[] = {
       {"yaw",    &icm_output.yaw,  MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,      .min.f=0,      .display_num=3, .float_point_num=1, NULL},
       {"pitch",     &icm_output.pitch,   MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,      .min.f=0,      .display_num=4, .float_point_num=1, NULL},
-      {"roll",     &icm_output.roll,    MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,      .min.f=0,      .display_num=3, .float_point_num=1, NULL},
+      {"roll",     &g_Debug_Roll_Display, MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0, .max.f=0,      .min.f=0,      .display_num=3, .float_point_num=1, NULL},
       {"gyro_y",    &icm_output.gyro_y,  MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,      .min.f=0,      .display_num=3, .float_point_num=1, NULL},
       {"gyro_x",     &icm_output.gyro_x,   MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,      .min.f=0,      .display_num=4, .float_point_num=1, NULL},
       {"State", &g_System_State, MENU_TYPE_INT8, .step.i32=1, .max.i32=1, .min.i32=0, .display_num=1, .float_point_num=0, save_pid_params}, // ✅ 改为 MENU_TYPE_INT8
       {"0_jixi", &mECHANICAL_ZERO, MENU_TYPE_FLOAT, .step.f=0.1, .max.f=30, .min.f=-30, .display_num=2, .float_point_num=2, NULL},
   };
   static menu_item_t balance_gyro_pid_items[] = {
-      {"kp", &balance_gyro_pid.kp, MENU_TYPE_FLOAT, .step.f=2, .max.f=500, .min.f=0, .display_num=3, .float_point_num=1, NULL},
+      {"kp", &balance_gyro_pid.kp, MENU_TYPE_FLOAT, .step.f=0.5, .max.f=500, .min.f=0, .display_num=3, .float_point_num=1, NULL},
       {"Kd", &balance_gyro_pid.kd, MENU_TYPE_FLOAT, .step.f=0.01,  .max.f=10, .min.f=0, .display_num=2, .float_point_num=3, NULL},
       {"ki", &balance_gyro_pid.ki, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10.0f, .min.f=0.0f, .display_num=2, .float_point_num=3, NULL},
       {"DEAD_0", &DEAD_ZONE, MENU_TYPE_UINT8, .step.u32=5, .max.u32=200, .min.u32=0, .display_num=3, .float_point_num=0, NULL},
@@ -67,28 +73,43 @@ static menu_system_t g_menu = {0};
       {"0_jixi", &mECHANICAL_ZERO, MENU_TYPE_FLOAT, .step.f=0.05, .max.f=30, .min.f=-30, .display_num=2, .float_point_num=2, NULL},
   };
    static menu_item_t balance_angle_pid_items[] = {
-      {"kp", &balance_angle_pid.kp, MENU_TYPE_FLOAT, .step.f=0.1, .max.f=200, .min.f=0, .display_num=1, .float_point_num=3, NULL},
+      {"kp", &balance_angle_pid.kp, MENU_TYPE_FLOAT, .step.f=0.1, .max.f=200, .min.f=0, .display_num=2, .float_point_num=2, NULL},
       {"Kd", &balance_angle_pid.kd, MENU_TYPE_FLOAT, .step.f=0.01,  .max.f=10, .min.f=0, .display_num=1, .float_point_num=3, NULL},  // ✅ 改为 2 位小数
-      {"ki", &balance_angle_pid.ki, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=3, NULL},
+      {"ki", &balance_angle_pid.ki, MENU_TYPE_FLOAT, .step.f=0.02f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=3, NULL},
       {"outgyr", &g_Debug_Target_Gyro, MENU_TYPE_READONLY,MENU_TYPE_FLOAT, .step.f=0, .max.f=0, .min.f=0, .display_num=3, .float_point_num=1, NULL},
       {"sp_flg", &speed_flag, MENU_TYPE_INT8, .step.i32=1, .max.i32=1, .min.i32=0, .display_num=1, .float_point_num=0, NULL},
       {"State", &g_System_State, MENU_TYPE_INT8, .step.i32=1, .max.i32=1, .min.i32=0, .display_num=1, .float_point_num=0, save_pid_params},
       {"djSTEP", &MAX_PWM_STEP, MENU_TYPE_INT8, .step.i32=5, .max.i32=60, .min.i32=0, .display_num=2, .float_point_num=0, save_pid_params},
   };
-   static menu_item_t speed_pid_items[] = {
-      {"kp", &speed_pid.kp, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=4, NULL},
-      {"Kd", &speed_pid.kd, MENU_TYPE_FLOAT, .step.f=0.01f,  .max.f=10, .min.f=0, .display_num=1, .float_point_num=4, NULL},
-      {"ki", &speed_pid.ki, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=4, NULL},
-      {"Sp_Out", &g_Debug_Speed_Output, MENU_TYPE_READONLY,MENU_TYPE_FLOAT, .step.f=0, .max.f=0, .min.f=0, .display_num=2, .float_point_num=2, NULL},
-      {"sp_tar", &g_Debug_Target_Speed, MENU_TYPE_FLOAT, .step.f=5, .max.f=1000, .min.f=0, .display_num=3, .float_point_num=1, NULL},
+	  static menu_item_t speed_pid_items[] = {
+	      {"kp", &speed_pid.kp, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=2, NULL},
+	      {"Kd", &speed_pid.kd, MENU_TYPE_FLOAT, .step.f=0.01f,  .max.f=10, .min.f=0, .display_num=1, .float_point_num=2, NULL},
+	      {"ki", &speed_pid.ki, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=2, NULL},
+	      {"Sp_Out", &g_Debug_Speed_Output, MENU_TYPE_READONLY,MENU_TYPE_FLOAT, .step.f=0, .max.f=0, .min.f=0, .display_num=2, .float_point_num=2, NULL},
+	      {"sp_tar", &g_Debug_Target_Speed, MENU_TYPE_FLOAT, .step.f=5, .max.f=1000, .min.f=0, .display_num=3, .float_point_num=1, NULL},
+	      {"Sp_Prot", &g_Wheel_Speed_Danger_Limit, MENU_TYPE_FLOAT, .step.f=10.0f, .max.f=2000.0f, .min.f=50.0f, .display_num=4, .float_point_num=1, NULL},
+	  };
+
+  // ============================================================
+  // 横滚角保护调节菜单 (浮浮酱新增 φ(≧ω≦*)♪)
+  // ============================================================
+  static menu_item_t roll_protection_items[] = {
+      {"Kp",    &g_Roll_Kp,            MENU_TYPE_FLOAT, .step.f=0.1f, .max.f=5.0f, .min.f=0.0f, .display_num=2, .float_point_num=2, NULL},
+      {"Ki",    &g_Roll_Ki,            MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=1.0f, .min.f=0.0f, .display_num=2, .float_point_num=3, NULL},
+      {"Kd",    &g_Roll_Kd,            MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=1.0f, .min.f=0.0f, .display_num=2, .float_point_num=3, NULL},
+      {"Ro_Sta", &g_Debug_Roll_State,   MENU_TYPE_READONLY, MENU_TYPE_INT8, .step.i32=0, .max.i32=0, .min.i32=0, .display_num=1, .float_point_num=0, NULL},
+      {"Roll",   &g_Debug_Roll,         MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,   .min.f=0,   .display_num=3, .float_point_num=2, NULL},
+      {"H_L",        &g_Debug_Height_L,     MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,   .min.f=0,   .display_num=2, .float_point_num=2, NULL},
+      {"H_R",        &g_Debug_Height_R,     MENU_TYPE_READONLY, MENU_TYPE_FLOAT, .step.f=0,   .max.f=0,   .min.f=0,   .display_num=2, .float_point_num=2, NULL},
   };
 
   // 定义菜单页面
   static menu_page_t menu_pages[] = {
-      {"Sensors",     sensor_items, sizeof(sensor_items)/sizeof(sensor_items[0])},
-      {"gyro_pid",     balance_gyro_pid_items, sizeof(balance_gyro_pid_items)/sizeof(balance_gyro_pid_items[0])},
-      {"angle_pid",     balance_angle_pid_items, sizeof(balance_angle_pid_items)/sizeof(balance_angle_pid_items[0])},
-      {"spd_pid",     speed_pid_items, sizeof(speed_pid_items)/sizeof(speed_pid_items[0])},
+      {"Sensors",     sensor_items,           sizeof(sensor_items)/sizeof(sensor_items[0])},
+      {"gyro_pid",    balance_gyro_pid_items, sizeof(balance_gyro_pid_items)/sizeof(balance_gyro_pid_items[0])},
+      {"angle_pid",   balance_angle_pid_items,sizeof(balance_angle_pid_items)/sizeof(balance_angle_pid_items[0])},
+      {"spd_pid",     speed_pid_items,        sizeof(speed_pid_items)/sizeof(speed_pid_items[0])},
+      {"Roll",   roll_protection_items,  sizeof(roll_protection_items)/sizeof(roll_protection_items[0])},
   };
 void my_menu_init()
 {
@@ -105,7 +126,7 @@ void my_menu_init()
     tft180_set_color(RGB565_BLACK, RGB565_WHITE);
 
     // 5. 初始化菜单系统
-    menu_init(menu_pages, 4);  // 2 个页面：PID Control 和 Sensors
+    menu_init(menu_pages, 5);  // 5 个页面：Sensors, gyro_pid, angle_pid, spd_pid, Roll_Prot
 }
 
 //================================================= 内部辅助函数声明 ==================================================
@@ -114,6 +135,15 @@ static void menu_restore_value(menu_item_t *item);
 static void menu_adjust_value(menu_item_t *item, int8_t direction);
 static void menu_draw_item(uint8_t item_index, uint8_t is_current);
 static void menu_draw_page_header(void);
+static uint32_t menu_pow10(uint8_t n);
+static int64_t menu_round_scaled(float value, uint32_t scale);
+static float menu_round_to_decimals(float value, uint8_t decimals);
+static float menu_adjust_float_precise(float current, float step, int8_t direction, float min, float max, uint8_t decimals);
+static void menu_show_float_fixed(uint16_t x, uint16_t y, float value, uint8_t display_num, uint8_t decimals);
+static void menu_invalidate_readonly_cache(void);
+static uint8_t menu_get_readonly_scaled(const menu_item_t *item, int64_t *out_scaled);
+static void menu_update_readonly_cache(uint8_t item_index, const menu_item_t *item);
+static uint8_t menu_readonly_changed(uint8_t item_index, const menu_item_t *item);
 
 //================================================= 菜单系统初始化 ==================================================
 void menu_init(menu_page_t *pages, uint8_t page_count)
@@ -130,6 +160,8 @@ void menu_init(menu_page_t *pages, uint8_t page_count)
     g_menu.state = MENU_NAV_MODE;
     g_menu.refresh_flag = 1; // 标记全屏刷新
     g_menu.last_item_index = 0;
+    menu_invalidate_readonly_cache();
+    g_ro_cache_page = 0xFF;
 
     // 清屏并显示初始页面
     tft180_clear();
@@ -222,7 +254,9 @@ void Menu_Key_Handler(uint8_t key_val)
                         *(uint32_t*)(current_item->ptr) = g_menu.edit_val.u32;
                         break;
                     case MENU_TYPE_FLOAT:
-                        *(float*)(current_item->ptr) = g_menu.edit_val.f;
+                        *(float*)(current_item->ptr) = menu_round_to_decimals(
+                            g_menu.edit_val.f, current_item->float_point_num
+                        );
                         break;
                     default:
                         break;
@@ -289,7 +323,12 @@ void Menu_Refresh_Task(void)
         for (uint8_t i = 0; i < current_page->item_count; i++)
         {
             menu_draw_item(i, (i == g_menu.current_item_index));
+            if (current_page->items[i].type == MENU_TYPE_READONLY)
+            {
+                menu_update_readonly_cache(i, &current_page->items[i]);
+            }
         }
+        g_ro_cache_page = g_menu.current_page_index;
 
         g_menu.refresh_flag = 0; // 清除刷新标志
     }
@@ -304,29 +343,22 @@ void Menu_Refresh_Task(void)
 
         g_menu.refresh_flag = 0; // 清除刷新标志
     }
-    // 性能优化：降低自动刷新频率 (避免频繁重绘)
-    // 只有在非编辑模式下，且间隔一定周期才刷新只读数据
+    // 导航模式：只读条目按“变化检测”刷新，避免整页轮询重绘
     else if (g_menu.state == MENU_NAV_MODE)
     {
-        // 建议：在调度器中以较低频率调用 (如每100ms调用一次)
-        // 不要在此处添加时间判断，而是通过调整调度器调用周期来控制刷新频率
-        static uint8_t refresh_skip_counter = 0;
-
-        // 跳帧刷新：每5次调用才真正刷新一次 (降低50%刷新率)
-        refresh_skip_counter++;
-        if (refresh_skip_counter >= 5)
+        if (g_ro_cache_page != g_menu.current_page_index)
         {
-            refresh_skip_counter = 0;
+            menu_invalidate_readonly_cache();
+            g_ro_cache_page = g_menu.current_page_index;
+        }
 
-            // 遍历当前页面的所有条目，仅刷新只读类型的数据
-            for (uint8_t i = 0; i < current_page->item_count; i++)
+        for (uint8_t i = 0; i < current_page->item_count; i++)
+        {
+            menu_item_t *item = &current_page->items[i];
+            if (item->type == MENU_TYPE_READONLY && menu_readonly_changed(i, item))
             {
-                menu_item_t *item = &current_page->items[i];
-                if (item->type == MENU_TYPE_READONLY)
-                {
-                    // 只刷新只读条目的数值部分（不影响光标和选中状态）
-                    menu_draw_item(i, (i == g_menu.current_item_index));
-                }
+                menu_draw_item(i, (i == g_menu.current_item_index));
+                menu_update_readonly_cache(i, item);
             }
         }
     }
@@ -537,10 +569,9 @@ static void menu_adjust_value(menu_item_t *item, int8_t direction)
             float step = item->step.f;
             float max = item->max.f;
             float min = item->min.f;
-
-            g_menu.edit_val.f += (direction * step);
-            if (g_menu.edit_val.f > max) g_menu.edit_val.f = max;
-            if (g_menu.edit_val.f < min) g_menu.edit_val.f = min;
+            g_menu.edit_val.f = menu_adjust_float_precise(
+                g_menu.edit_val.f, step, direction, min, max, item->float_point_num
+            );
             break;
         }
         case MENU_TYPE_READONLY:
@@ -565,12 +596,9 @@ static void menu_draw_item(uint8_t item_index, uint8_t is_current)
 
     // 清除当前行 (用背景色填充一行，清除整行避免残影)
     tft180_set_color(RGB565_WHITE, RGB565_WHITE);
-    for (uint8_t j = 0; j < 16; j++)  // 填充整个行高
+    for (uint8_t j = 0; j < 16; j++)  // 按线清行，减轻逐点刷新的慢感
     {
-        for (uint8_t i = 0; i < 128; i++)
-        {
-            tft180_draw_point(i, y + j, RGB565_WHITE);
-        }
+        tft180_draw_line(0, y + j, 127, y + j, RGB565_WHITE);
     }
 
     // 设置颜色
@@ -622,7 +650,11 @@ static void menu_draw_item(uint8_t item_index, uint8_t is_current)
                     tft180_show_uint(MENU_VALUE_START_X, y, *(uint32_t*)(item->ptr), item->display_num);
                     break;
                 case MENU_TYPE_FLOAT:
-                    tft180_show_float(MENU_VALUE_START_X, y, *(float*)(item->ptr), item->display_num, item->float_point_num);
+                    menu_show_float_fixed(
+                        MENU_VALUE_START_X, y,
+                        *(float*)(item->ptr),
+                        item->display_num, item->float_point_num
+                    );
                     break;
                 default:
                     break;
@@ -672,9 +704,17 @@ static void menu_draw_item(uint8_t item_index, uint8_t is_current)
                     break;
                 case MENU_TYPE_FLOAT:
                     if (g_menu.state == MENU_EDIT_MODE && is_current)
-                        tft180_show_float(MENU_VALUE_START_X, y, g_menu.edit_val.f, item->display_num, item->float_point_num);  // 显示临时值
+                        menu_show_float_fixed(
+                            MENU_VALUE_START_X, y,
+                            g_menu.edit_val.f,
+                            item->display_num, item->float_point_num
+                        );  // 显示临时值
                     else
-                        tft180_show_float(MENU_VALUE_START_X, y, *(float*)(item->ptr), item->display_num, item->float_point_num);  // 显示原值
+                        menu_show_float_fixed(
+                            MENU_VALUE_START_X, y,
+                            *(float*)(item->ptr),
+                            item->display_num, item->float_point_num
+                        );  // 显示原值
                     break;
                 default:
                     break;
@@ -709,4 +749,194 @@ static void menu_draw_page_header(void)
     {
         tft180_draw_point(i, 15, RGB565_WHITE);
     }
+}
+
+static uint32_t menu_pow10(uint8_t n)
+{
+    uint32_t value = 1;
+    while (n > 0 && value <= 100000000U)
+    {
+        value *= 10U;
+        n--;
+    }
+    return value;
+}
+
+static int64_t menu_round_scaled(float value, uint32_t scale)
+{
+    float scaled = value * (float)scale;
+    if (scaled >= 0.0f)
+    {
+        return (int64_t)(scaled + 0.5f);
+    }
+    return (int64_t)(scaled - 0.5f);
+}
+
+static float menu_round_to_decimals(float value, uint8_t decimals)
+{
+    uint32_t scale = menu_pow10(decimals);
+    int64_t scaled = menu_round_scaled(value, scale);
+    return (float)scaled / (float)scale;
+}
+
+static float menu_adjust_float_precise(float current, float step, int8_t direction, float min, float max, uint8_t decimals)
+{
+    uint32_t scale = menu_pow10(decimals);
+    int64_t current_scaled = menu_round_scaled(current, scale);
+    int64_t step_scaled = menu_round_scaled(step, scale);
+    int64_t min_scaled = menu_round_scaled(min, scale);
+    int64_t max_scaled = menu_round_scaled(max, scale);
+
+    if (step_scaled == 0)
+    {
+        step_scaled = 1;
+    }
+
+    current_scaled += (int64_t)direction * step_scaled;
+    if (current_scaled > max_scaled) current_scaled = max_scaled;
+    if (current_scaled < min_scaled) current_scaled = min_scaled;
+
+    return (float)current_scaled / (float)scale;
+}
+
+static void menu_show_float_fixed(uint16_t x, uint16_t y, float value, uint8_t display_num, uint8_t decimals)
+{
+    char buf[24];
+    uint8_t idx = 0;
+    uint8_t i = 0;
+    uint8_t int_len = 0;
+    uint32_t scale = menu_pow10(decimals);
+    int64_t scaled = menu_round_scaled(value, scale);
+    uint8_t is_negative = (scaled < 0) ? 1U : 0U;
+    uint64_t abs_scaled = (scaled < 0) ? (uint64_t)(-scaled) : (uint64_t)scaled;
+    uint32_t int_part = (uint32_t)(abs_scaled / scale);
+    uint32_t frac_part = (uint32_t)(abs_scaled % scale);
+    uint32_t mod = 1U;
+    char int_buf[12];
+    uint32_t divisor = 1U;
+
+    if (display_num > 0)
+    {
+        for (i = 0; i < display_num; i++)
+        {
+            mod *= 10U;
+        }
+        if (mod > 0U)
+        {
+            int_part %= mod;
+        }
+    }
+
+    if (is_negative)
+    {
+        buf[idx++] = '-';
+    }
+
+    if (int_part == 0U)
+    {
+        buf[idx++] = '0';
+    }
+    else
+    {
+        while (int_part > 0U && int_len < sizeof(int_buf))
+        {
+            int_buf[int_len++] = (char)('0' + (int_part % 10U));
+            int_part /= 10U;
+        }
+        while (int_len > 0U)
+        {
+            buf[idx++] = int_buf[--int_len];
+        }
+    }
+
+    if (decimals > 0U)
+    {
+        buf[idx++] = '.';
+        if (scale > 1U)
+        {
+            divisor = scale / 10U;
+        }
+        while (decimals > 0U)
+        {
+            buf[idx++] = (char)('0' + ((frac_part / divisor) % 10U));
+            if (divisor > 1U)
+            {
+                divisor /= 10U;
+            }
+            decimals--;
+        }
+    }
+
+    buf[idx] = '\0';
+    tft180_show_string(x, y, buf);
+}
+
+static void menu_invalidate_readonly_cache(void)
+{
+    memset(g_ro_cache_valid, 0, sizeof(g_ro_cache_valid));
+}
+
+static uint8_t menu_get_readonly_scaled(const menu_item_t *item, int64_t *out_scaled)
+{
+    if (item == NULL || out_scaled == NULL || item->ptr == NULL || item->type != MENU_TYPE_READONLY)
+    {
+        return 0;
+    }
+
+    switch (item->actual_type)
+    {
+        case MENU_TYPE_INT8:
+            *out_scaled = (int64_t)(*(int8_t*)(item->ptr));
+            return 1;
+        case MENU_TYPE_INT16:
+            *out_scaled = (int64_t)(*(int16_t*)(item->ptr));
+            return 1;
+        case MENU_TYPE_INT32:
+            *out_scaled = (int64_t)(*(int32_t*)(item->ptr));
+            return 1;
+        case MENU_TYPE_UINT8:
+            *out_scaled = (int64_t)(*(uint8_t*)(item->ptr));
+            return 1;
+        case MENU_TYPE_UINT16:
+            *out_scaled = (int64_t)(*(uint16_t*)(item->ptr));
+            return 1;
+        case MENU_TYPE_UINT32:
+            *out_scaled = (int64_t)(*(uint32_t*)(item->ptr));
+            return 1;
+        case MENU_TYPE_FLOAT:
+        {
+            uint32_t scale = menu_pow10(item->float_point_num);
+            *out_scaled = menu_round_scaled(*(float*)(item->ptr), scale);
+            return 1;
+        }
+        default:
+            return 0;
+    }
+}
+
+static void menu_update_readonly_cache(uint8_t item_index, const menu_item_t *item)
+{
+    int64_t scaled = 0;
+    if (item_index >= MENU_MAX_ITEMS_PER_PAGE || !menu_get_readonly_scaled(item, &scaled))
+    {
+        return;
+    }
+
+    g_ro_cache_scaled[item_index] = scaled;
+    g_ro_cache_valid[item_index] = 1;
+}
+
+static uint8_t menu_readonly_changed(uint8_t item_index, const menu_item_t *item)
+{
+    int64_t scaled = 0;
+    if (item_index >= MENU_MAX_ITEMS_PER_PAGE || !menu_get_readonly_scaled(item, &scaled))
+    {
+        return 0;
+    }
+
+    if (!g_ro_cache_valid[item_index] || g_ro_cache_scaled[item_index] != scaled)
+    {
+        return 1;
+    }
+    return 0;
 }

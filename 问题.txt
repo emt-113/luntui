@@ -1,81 +1,45 @@
-角色设定： 你是一名精通嵌入式 C 语言开发的工程师，熟悉 Infineon CYT4BB 平台和 IAR 开发环境。我需要你基于现有的屏幕驱动，实现一个通用多级菜单框架。
+你好！我正在开发一款 V型五连杆轮腿机器人（倒立摆架构）。目前速度环已调通，基础高度固定为 4.4cm，腿部机械伸展极限为 14.5cm。
 
-项目文件结构：
+现在我需要你帮我编写基于“单边不对称代偿”的横滚角（Roll）防护代码。请严格遵循以下物理设定和控制逻辑，并尽量复用现有文件中的变量定义。
 
-驱动头文件：D:\Dsektop\luntui\libraries\zf_device\zf_device_tft180.h (已提供 API)
+【物理设定与逻辑】
 
-字体颜色：D:\Dsektop\luntui\libraries\zf_common\zf_common_font.h
+Roll 轴方向： Roll < 0° 代表车身左侧偏低，右侧偏高。
 
-菜单源码：D:\Dsektop\luntui\luntui\code\auto_menu.c (需要编写)
+控制策略（单边只伸不缩）：
 
-菜单头文件：D:\Dsektop\luntui\luntui\code\auto_menu.h (需要编写)
+车身倾斜时，较高一侧的腿保持基础高度（4.4cm）定死不动。
 
-按键处理：D:\Dsektop\luntui\luntui\code\key_app.c (需要修改)
+较低一侧的腿根据 Roll 的误差（PD控制）主动伸长，以顶平车身。最大不能超过 14.5cm。
 
-调度器：D:\Dsektop\luntui\luntui\code\scheduler.c (需要集成)
+分级保护阈值：
 
-已有的屏幕 API (zf_device_tft180.h)：
+安全死区 (-2.5° ~ 2.5°)： 忽略误差，左右腿均保持 4.4cm。
 
-C
-void tft180_show_string(uint16 x, uint16 y, const char dat[]);
-void tft180_show_int(uint16 x, uint16 y, const int32 dat, uint8 num);   // 显示 int32
-void tft180_show_uint(uint16 x, uint16 y, const uint32 dat, uint8 num); // 显示 uint32
-void tft180_show_float(uint16 x, uint16 y, const double dat, uint8 num, uint8 pointnum); // 显示 double
-void tft180_set_color(const uint16 pen, const uint16 bgcolor); // 设置颜色
-void tft180_clear(void); // 清屏
-// 宏定义颜色：RGB565_RED, RGB565_GREEN, RGB565_WHITE, RGB565_BLUE 等
-需求详情：
+动态代偿区 (2.5° ~ 45° 或 -2.5° ~ -45°)： 启动单边伸长代偿逻辑。
 
-1. 数据结构设计 (auto_menu.h) 请定义一个支持 int, uint, float 和 ReadOnly 类型的通用结构体 MenuItem。
+失控危险区 (> 45° 或 < -45°)： 触发系统停机保护，强制关闭舵机和电机输出，防止堵转。
 
-成员应包含：显示名称(Label)、变量指针(void*)、数据类型枚举、步进值(Step)、最大值(Max)、最小值(Min)、确认回调函数指针。
+【需要修改的文件与重构要求】
 
-菜单层级为两级：一级为分类(Page)，二级为具体条目(Item)。
+1. vmc.c (运动学查表核心)：
 
-2. 核心逻辑 (auto_menu.c) 系统通过状态机运行，分为 NAV_MODE (浏览) 和 EDIT_MODE (编辑)。请实现两个核心函数：
 
-void Menu_Key_Handler(uint8_t key_val)：
 
-此函数由按键任务直接触发，不包含耗时的屏幕刷新代码。
+2. control.c (控制逻辑层)：
 
-按键定义：1=上, 2=下, 3=确认, 4=退出/返回。
+编写 Roll_Protection_Compute() 函数，实现上述的分级保护与 PD 计算。
 
-确认键 (3)：
+输出平滑处理后的 Height_L 和 Height_R。
 
-浏览模式 -> 编辑模式：备份当前值到 backup_val，状态置为 EDIT。
+请复用现有的 IMU 变量（假设为 icm_output.roll ）和系统状态机变量（如 g_System_State）。
 
-编辑模式 -> 浏览模式：执行回调函数（如保存参数），状态置为 NAV。
+3. Servo.c (舵机执行层)：
 
-退出键 (4)：
+提供一个将 vmc.c 算出的单侧舵机 PWM 映射到具体 4 个舵机的执行接口。
 
-编辑模式 -> 浏览模式：执行数据回滚 (将 *ptr 恢复为 backup_val)，不保存，状态置为 NAV。
+【代码输出要求】
 
-二级菜单 -> 一级菜单：返回上一级。
+只需要输出新增或修改的函数代码片段，不需要写满整个文件。
 
-上/下键 (1/2)：
-
-浏览模式：移动光标索引。
-
-编辑模式：实时修改 *ptr 指向的变量值（val += step），并进行限幅处理。
-
-void Menu_Refresh_Task(void)：
-
-此函数由调度器定时调用（如 100ms 一次）。
-
-负责 UI 渲染。
-
-交互细节：
-
-浏览时：光标为 >，数值颜色正常。
-
-编辑时：光标为 *，数值变为绿色 (RGB565_GREEN) 提示正在修改。
-
-只刷新当前页面的数据，避免全屏闪烁。
-
-3. 代码集成
-
-在 key_app.c 的 key_task 中，直接在检测到按键按下 (key_down == x) 时调用 Menu_Key_Handler(x)。
-
-在 scheduler.c 中展示如何添加 Menu_Refresh_Task。
-
-输出要求： 请给出 auto_menu.h 和 auto_menu.c 的完整代码，以及 key_app.c 和 scheduler.c 的修改片段。代码必须适配 IAR 环境，变量类型使用标准库（如 uint8 需转为 uint8_t 或适配库中的定义）。
+变量命名需规范（例如加入平滑滤波防止腿部突变），并加上详细的中文注释说明控制流向。

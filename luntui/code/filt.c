@@ -6,6 +6,7 @@
 
 #define delta_T     0.001f
 #define M_PI        3.1415926f
+#define DEG_TO_RAD  (M_PI / 180.0f)
 //float icm_ay,icm_sy;
 
 
@@ -78,12 +79,12 @@ void ICM_getValues()
     icm_data.acc_z = -((float)imu660rb_acc_z / 4098.0f);
 
     // 2. 陀螺仪处理：量程 ±2000dps -> 灵敏度 14.3 LSB/(°/s)
-    // 正确公式：(原始值 - 零偏) / 灵敏度 * (PI/180) 得到 rad/s
+    // 统一对外/控制链单位：deg/s
     float gyro_sensitivity = 14.3f; 
     
-    icm_data.gyro_x = ((float)imu660rb_gyro_x - GyroOffset.Xdata) / gyro_sensitivity * (M_PI / 180.0f);
-    icm_data.gyro_y = ((float)imu660rb_gyro_y - GyroOffset.Ydata) / gyro_sensitivity * (M_PI / 180.0f);
-    icm_data.gyro_z = ((float)imu660rb_gyro_z - GyroOffset.Zdata) / gyro_sensitivity * (M_PI / 180.0f);
+    icm_data.gyro_x = ((float)imu660rb_gyro_x - GyroOffset.Xdata) / gyro_sensitivity;
+    icm_data.gyro_y = ((float)imu660rb_gyro_y - GyroOffset.Ydata) / gyro_sensitivity;
+    icm_data.gyro_z = ((float)imu660rb_gyro_z - GyroOffset.Zdata) / gyro_sensitivity;
 // ==========================================================
     // 【修改】轴间耦合补偿
     // 根据你的数据计算得出：k ≈ -0.09
@@ -93,21 +94,22 @@ void ICM_getValues()
     // 核心公式：从 Z 轴中减去 Y 轴的分量
     // 因为 k 是负数，这里实际上变成了 Z + (|k| * Y)，正好抵消掉你的反向漂移
     icm_data.gyro_z = icm_data.gyro_z - (icm_data.gyro_y * coupling_k);
-    icm_data.gyro_y-=0.007;
+    // 历史补偿值从 rad/s 换算到 deg/s
+    icm_data.gyro_y -= 0.401f;
 
     // ==========================================================
     // 【死区处理】（必须放在补偿之后！）
     // 数据显示你还存在约 -0.07 的静态零偏，所以死区不能太小
     // ==========================================================
-    if (icm_data.gyro_z > -0.18f && icm_data.gyro_z < 0.18f) {
+    if (icm_data.gyro_z > -10.313f && icm_data.gyro_z < 10.313f) {
         icm_data.gyro_z = 0.0f;
     }
     // 同理，如果 X 和 Y 也有微小漂移，也可以加
-    if (icm_data.gyro_x > -0.02f && icm_data.gyro_x < 0.02f) icm_data.gyro_x = 0.0f;
-    if (icm_data.gyro_y > -0.01f && icm_data.gyro_y < 0.01f) icm_data.gyro_y = 0.0f;
+    if (icm_data.gyro_x > -1.146f && icm_data.gyro_x < 1.146f) icm_data.gyro_x = 0.0f;
+    if (icm_data.gyro_y > -0.573f && icm_data.gyro_y < 0.573f) icm_data.gyro_y = 0.0f;
     else    
     {
-      icm_data.gyro_y=icm_data.gyro_y>=0.01f?icm_data.gyro_y-0.01:icm_data.gyro_y+0.01;
+      icm_data.gyro_y = icm_data.gyro_y >= 0.573f ? icm_data.gyro_y - 0.573f : icm_data.gyro_y + 0.573f;
     }
 }
 
@@ -186,9 +188,12 @@ void ICM_getEulerianAngles(void)
       imu660rb_get_gyro();
       imu660rb_get_acc();                                     // 获取 IMU660RA 加速度计数据
 
-
     ICM_getValues();
-    ICM_AHRSupdate(icm_data.gyro_x, icm_data.gyro_y, icm_data.gyro_z, icm_data.acc_x, icm_data.acc_y, icm_data.acc_z);
+    // AHRS 内部积分仍按 rad/s 计算，这里做一次单位转换
+    ICM_AHRSupdate(icm_data.gyro_x * DEG_TO_RAD,
+                   icm_data.gyro_y * DEG_TO_RAD,
+                   icm_data.gyro_z * DEG_TO_RAD,
+                   icm_data.acc_x, icm_data.acc_y, icm_data.acc_z);
     float q0 = Q_info.q0;
     float q1 = Q_info.q1;
     float q2 = Q_info.q2;
@@ -207,6 +212,7 @@ void ICM_getEulerianAngles(void)
     icm_output.acc_y = -icm_data.acc_y;
     icm_output.acc_z = -icm_data.acc_z;
 
+    // 控制层统一使用 deg/s
     icm_output.gyro_x = -icm_data.gyro_x;
     icm_output.gyro_y = -icm_data.gyro_y;
     icm_output.gyro_z = -icm_data.gyro_z;
