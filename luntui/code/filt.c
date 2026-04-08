@@ -1,237 +1,95 @@
 #include "filt.h"
 
-
-
-
-
-#define delta_T     0.001f
-#define M_PI        3.1415926f
-#define DEG_TO_RAD  (M_PI / 180.0f)
-//float icm_ay,icm_sy;
-
-
-
-float I_ex, I_ey, I_ez;
-
-
-quater_param_t Q_info = {1, 0, 0};
-
-
-icm_param_t icm_data;
-icm_output_t icm_output;  // 新增输出变量
-gyro_param_t GyroOffset;
-
-uint8 GyroOffset_init = 0;
-
-float imu_gyro_z_val=0;
-float param_Kp = 2;
-float param_Ki = 0.001;
-
-
-
-float fast_sqrt(float x)
+icm_output_t icm_output; 
+static float imu660rc_gyro_dps(int16 gyro_value)
 {
-    float halfx = 0.5f * x;
-    float y = x;
-    long i = *(long *) &y;
-    i = 0x5f3759df - (i >> 1);
-    y = *(float *) &i;
-    y = y * (1.5f - (halfx * y * y));
-    return y;
+    return imu660rc_gyro_transition(gyro_value);
 }
 
-
-void gyroOffset_init(void)
+static float imu660rc_roll_deg(void)
 {
-    GyroOffset.Xdata = 0;
-    GyroOffset.Ydata = 0;
-    GyroOffset.Zdata = 0;
-    for (uint16 i = 0; i < 500; ++i)
-    {
-        imu660rb_get_acc();                                     // 获取 IMU660RB 加速度计数据
-        imu660rb_get_gyro();
+    return imu660rc_pitch;
+}
 
-        GyroOffset.Xdata += imu660rb_gyro_x;
-        GyroOffset.Ydata += imu660rb_gyro_y;
-        GyroOffset.Zdata += imu660rb_gyro_z;
-        system_delay_ms(5);
+static float imu660rc_pitch_deg(void)
+{
+    return imu660rc_roll;
+}
+
+static float imu660rc_yaw_deg(void)
+{
+    return imu660rc_yaw;
+}
+
+gyro_offset_t gyro_offset = {0};
+
+void imu_read()
+{
+  icm_output.acc_x=imu660rc_acc_y;
+  icm_output.acc_y=imu660rc_acc_x;
+  icm_output.acc_z=imu660rc_acc_z;
+  icm_output.gyro_x=imu660rc_gyro_transition(imu660rc_gyro_y);
+  icm_output.gyro_y=imu660rc_gyro_transition(imu660rc_gyro_x);
+  icm_output.gyro_z=imu660rc_gyro_transition(imu660rc_gyro_z);
+  icm_output.pitch=imu660rc_roll;
+  icm_output.roll=imu660rc_pitch;
+  icm_output.yaw=imu660rc_yaw;
+
+  // 应用零偏补偿
+  if (gyro_offset.is_calibrated) {
+    icm_output.gyro_x -= gyro_offset.gyro_x_offset;
+    icm_output.gyro_y -= gyro_offset.gyro_y_offset;
+    icm_output.gyro_z -= gyro_offset.gyro_z_offset;
+  }
+
+//  // 死区滤波 - 静止时小噪声直接置0
+//  #define GYRO_DEADZONE 1.4f
+//  if (fabs(icm_output.gyro_x) < GYRO_DEADZONE) icm_output.gyro_x = 0;
+//  if (fabs(icm_output.gyro_y) < GYRO_DEADZONE) icm_output.gyro_y = 0;
+//  if (fabs(icm_output.gyro_z) < GYRO_DEADZONE) icm_output.gyro_z = 0;
+}
+
+/**
+ * @brief 陀螺仪零偏校准
+ * @note  需要保持IMU静止，采集200次数据求平均值
+ * @note  注意：由于安装方向，x和y轴数据已互换，校准时要同步处理
+ */
+void gyro_calibrate(void)
+{
+    #define CALIB_SAMPLES    1000
+    #define CALIB_DELAY_MS   5      // 每次采样间隔5ms，总共约1秒
+    #define DISCARD_SAMPLES  100     // 丢弃前50个不稳定样本
+
+    float sum_x = 0, sum_y = 0, sum_z = 0;
+
+    // 1. 丢弃上电初期不稳定数据
+    for (int i = 0; i < DISCARD_SAMPLES; i++) {
+        volatile float dummy;
+        dummy = imu660rc_gyro_transition(imu660rc_gyro_y);
+        dummy = imu660rc_gyro_transition(imu660rc_gyro_x);
+        dummy = imu660rc_gyro_transition(imu660rc_gyro_z);
+        (void)dummy;
+        system_delay_ms(CALIB_DELAY_MS);
     }
 
-    GyroOffset.Xdata /= 500;
-    GyroOffset.Ydata /= 500;
-    GyroOffset.Zdata /= 500;
-    GyroOffset.AXdata /= 500;
-    GyroOffset.AYdata /= 500;
-    GyroOffset.AZdata /= 500;
-
-    GyroOffset_init = 1;
-}
-
-#define alpha         0.7f
-
-
-void ICM_getValues()
-{
-    // 1. 加速度处理：根据头文件 4098 对应 ±8G 时的 1g
-    // 这里的 alpha 0.3f 建议调大到 0.8f 左右，否则平衡轮腿响应太慢
-    icm_data.acc_x = -((float)imu660rb_acc_x / 4098.0f);
-    icm_data.acc_y = -((float)imu660rb_acc_y / 4098.0f);
-    icm_data.acc_z = -((float)imu660rb_acc_z / 4098.0f);
-
-    // 2. 陀螺仪处理：量程 ±2000dps -> 灵敏度 14.3 LSB/(°/s)
-    // 统一对外/控制链单位：deg/s
-    float gyro_sensitivity = 14.3f; 
-    
-    icm_data.gyro_x = ((float)imu660rb_gyro_x - GyroOffset.Xdata) / gyro_sensitivity;
-    icm_data.gyro_y = ((float)imu660rb_gyro_y - GyroOffset.Ydata) / gyro_sensitivity;
-    icm_data.gyro_z = ((float)imu660rb_gyro_z - GyroOffset.Zdata) / gyro_sensitivity;
-// ==========================================================
-    // 【修改】轴间耦合补偿
-    // 根据你的数据计算得出：k ≈ -0.09
-    // ==========================================================
-    float coupling_k = -0.09f; 
-    
-    // 核心公式：从 Z 轴中减去 Y 轴的分量
-    // 因为 k 是负数，这里实际上变成了 Z + (|k| * Y)，正好抵消掉你的反向漂移
-    icm_data.gyro_z = icm_data.gyro_z - (icm_data.gyro_y * coupling_k);
-    // 历史补偿值从 rad/s 换算到 deg/s
-    icm_data.gyro_y -= 0.401f;
-
-    // ==========================================================
-    // 【死区处理】（必须放在补偿之后！）
-    // 数据显示你还存在约 -0.07 的静态零偏，所以死区不能太小
-    // ==========================================================
-    if (icm_data.gyro_z > -10.313f && icm_data.gyro_z < 10.313f) {
-        icm_data.gyro_z = 0.0f;
+    // 2. 正式采样，每次间隔等待新数据
+    for (int i = 0; i < CALIB_SAMPLES; i++) {
+        sum_x += imu660rc_gyro_transition(imu660rc_gyro_y);  // 对应 icm_output.gyro_x
+        sum_y += imu660rc_gyro_transition(imu660rc_gyro_x);  // 对应 icm_output.gyro_y
+        sum_z += imu660rc_gyro_transition(imu660rc_gyro_z);  // 对应 icm_output.gyro_z
+        system_delay_ms(CALIB_DELAY_MS);
     }
-    // 同理，如果 X 和 Y 也有微小漂移，也可以加
-    if (icm_data.gyro_x > -1.146f && icm_data.gyro_x < 1.146f) icm_data.gyro_x = 0.0f;
-    if (icm_data.gyro_y > -0.573f && icm_data.gyro_y < 0.573f) icm_data.gyro_y = 0.0f;
-    else    
-    {
-      icm_data.gyro_y = icm_data.gyro_y >= 0.573f ? icm_data.gyro_y - 0.573f : icm_data.gyro_y + 0.573f;
-    }
+
+    gyro_offset.gyro_x_offset = sum_x / CALIB_SAMPLES;
+    gyro_offset.gyro_y_offset = sum_y / CALIB_SAMPLES;
+    gyro_offset.gyro_z_offset = sum_z / CALIB_SAMPLES;
+    gyro_offset.is_calibrated = 1;
+
+    // 同时保存到 icm_output 方便查看
+    icm_output.gyro_x_offset = gyro_offset.gyro_x_offset;
+    icm_output.gyro_y_offset = gyro_offset.gyro_y_offset;
+    icm_output.gyro_z_offset = gyro_offset.gyro_z_offset;
 }
 
 
-
-void ICM_AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az) {
-    float halfT = 0.5 * delta_T;
-    float vx, vy, vz;
-    float ex, ey, ez;
-    float q0 = Q_info.q0;
-    float q1 = Q_info.q1;
-    float q2 = Q_info.q2;
-    float q3 = Q_info.q3;
-    float q0q0 = q0 * q0;
-    float q0q1 = q0 * q1;
-    float q0q2 = q0 * q2;
-//    float q0q3 = q0 * q3;
-    float q1q1 = q1 * q1;
-//    float q1q2 = q1 * q2;
-    float q1q3 = q1 * q3;
-    float q2q2 = q2 * q2;
-    float q2q3 = q2 * q3;
-    float q3q3 = q3 * q3;
-    // float delta_2 = 0;
-
-    float norm = fast_sqrt(ax * ax + ay * ay + az * az);
-    ax = ax * norm;
-    ay = ay * norm;
-    az = az * norm;
-
-    vx = 2 * (q1q3 - q0q2);
-    vy = 2 * (q0q1 + q2q3);
-    vz = q0q0 - q1q1 - q2q2 + q3q3;
-    //vz = (q0*q0-0.5f+q3 * q3) * 2;
-
-
-    ex = ay * vz - az * vy;
-    ey = az * vx - ax * vz;
-    ez = ax * vy - ay * vx;
-
-
-    I_ex += halfT * ex;   // integral error scaled by Ki
-    I_ey += halfT * ey;
-    I_ez += halfT * ez;
-
-  // 修改建议：不要让 Z 轴进行积分修正，因为它没有观测源（磁力计）
-  // 加速度计产生的 ez 主要是 Pitch/Roll 的误差，修正到 Yaw 上只会导致乱漂
-  gx = gx + param_Kp * ex + param_Ki * I_ex;
-  gy = gy + param_Kp * ey + param_Ki * I_ey;
-
-
-
-    q0 = q0 + (-q1 * gx - q2 * gy - q3 * gz) * halfT;
-    q1 = q1 + (q0 * gx + q2 * gz - q3 * gy) * halfT;
-    q2 = q2 + (q0 * gy - q1 * gz + q3 * gx) * halfT;
-    q3 = q3 + (q0 * gz + q1 * gy - q2 * gx) * halfT;
-    //    delta_2=(2*halfT*gx)*(2*halfT*gx)+(2*halfT*gy)*(2*halfT*gy)+(2*halfT*gz)*(2*halfT*gz);
-    //    q0 = (1-delta_2/8)*q0 + (-q1*gx - q2*gy - q3*gz)*halfT;
-    //    q1 = (1-delta_2/8)*q1 + (q0*gx + q2*gz - q3*gy)*halfT;
-    //    q2 = (1-delta_2/8)*q2 + (q0*gy - q1*gz + q3*gx)*halfT;
-    //    q3 = (1-delta_2/8)*q3 + (q0*gz + q1*gy - q2*gx)*halfT
-
-
-    // normalise quaternion
-    norm = fast_sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-    Q_info.q0 = q0 * norm;
-    Q_info.q1 = q1 * norm;
-    Q_info.q2 = q2 * norm;
-    Q_info.q3 = q3 * norm;
-}
-
-
-
-void ICM_getEulerianAngles(void)
-{
-      imu660rb_get_gyro();
-      imu660rb_get_acc();                                     // 获取 IMU660RA 加速度计数据
-
-    ICM_getValues();
-    // AHRS 内部积分仍按 rad/s 计算，这里做一次单位转换
-    ICM_AHRSupdate(icm_data.gyro_x * DEG_TO_RAD,
-                   icm_data.gyro_y * DEG_TO_RAD,
-                   icm_data.gyro_z * DEG_TO_RAD,
-                   icm_data.acc_x, icm_data.acc_y, icm_data.acc_z);
-    float q0 = Q_info.q0;
-    float q1 = Q_info.q1;
-    float q2 = Q_info.q2;
-    float q3 = Q_info.q3;
-
-
-    icm_data.pitch = asin(-2 * q1 * q3 + 2 * q0 * q2) * 180 / M_PI; // pitch
-    icm_data.roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2 * q2 + 1) * 180 / M_PI; // roll
-    icm_data.yaw = atan2(2 * q1 * q2 + 2 * q0 * q3, -2 * q2 * q2 - 2 * q3 * q3 + 1) * 180 / M_PI;//转向角
-
-    // ==========================================================
-    // 【符号转换层】将内部数据转换为输出数据
-    // 在这里调整符号，不影响姿态解算！
-    // ==========================================================
-    icm_output.acc_x = -icm_data.acc_x;
-    icm_output.acc_y = -icm_data.acc_y;
-    icm_output.acc_z = -icm_data.acc_z;
-
-    // 控制层统一使用 deg/s
-    icm_output.gyro_x = -icm_data.gyro_x;
-    icm_output.gyro_y = -icm_data.gyro_y;
-    icm_output.gyro_z = -icm_data.gyro_z;
-
-    icm_output.pitch = -icm_data.pitch;
-    icm_output.roll = -icm_data.roll;
-    icm_output.yaw = -icm_data.yaw;
-
-    // ==========================================================
-    // 【根据需要修改以下符号】
-    // 如果哪个轴反了，就在这里取反
-    // ==========================================================
-    // 示例：如果Z轴陀螺仪反了，取消下面注释
-    // icm_output.gyro_z = -icm_output.gyro_z;
-
-    // 示例：如果Z轴加速度反了，取消下面注释
-    // icm_output.acc_z = -icm_output.acc_z;
-
-    // 示例：如果yaw角反了，取消下面注释
-    // icm_output.yaw = -icm_output.yaw;
-}
 

@@ -39,7 +39,7 @@
  * @note 这是小车的自然平衡位置，需要通过实验测定
  *       当前值: -10.6° (负值表示车头自然下垂)
  */
-#define MECHANICAL_ZERO            (-7.65f)
+#define MECHANICAL_ZERO            (-7.75f)
 
 /**
  * @brief 最大倾斜角度 (异常保护阈值)
@@ -48,7 +48,7 @@
  *       单位: 度 (°)
  */
 #define TAITOUMAX_TILT                   (30.0f) //抬头
-#define DITOUMAX_TILT                   (30.0f)  //低头
+#define DITOUMAX_TILT                   (32.0f)  //低头
 /**
  * @brief 自动恢复角度阈值
  *
@@ -125,7 +125,7 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
  *       - 先调节此参数,使小车能够勉强维持直立
  *       - 过大会导致振荡,过小响应太慢
  */
-#define ANGLE_KP                          (27.5f)
+#define ANGLE_KP                          (37.9f)
 
 /**
  * @brief 角度环微分系数
@@ -136,7 +136,7 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
  *
  *       注意: 角度环一般不需要太大的 D 项
  */
-#define ANGLE_KD                          (0)
+#define ANGLE_KD                          (0.11)
 
 /**
  * @brief 角度环积分系数
@@ -145,16 +145,16 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
  *       初始值设为 0.0f，一般不需要积分
  *       保留接口供特殊场景使用
  */
-#define ANGLE_KI                          (1.5f)
+#define ANGLE_KI                          (2.5f)
 #define ANGLE_PID_OUTPUT_MAX              (150.0f)
 #define ANGLE_PID_OUTPUT_MIN              (-150.0f)
 #define ANGLE_PID_INTEGRAL_MAX   (80.0f)
 #define ANGLE_PID_INTEGRAL_MIN   (-80.0f)
-#define ANGLE_PID_I_STEP_MAX     (5)
-#define ANGLE_PID_I_STEP_MIN     (-5)
+#define ANGLE_PID_I_STEP_MAX     (6)
+#define ANGLE_PID_I_STEP_MIN     (-6)
 #define ANGLE_PID_ANTI_WINDUP_ENABLE      PID_TRUE
 #define ANGLE_PID_D_MODE                  PID_DERIVATIVE_ON_MEASUREMENT
-#define ANGLE_PID_D_LPF_ALPHA             (0.7)
+#define ANGLE_PID_D_LPF_ALPHA             (0.6)
 #define ANGLE_PID_RATE_LIMIT_ENABLE       PID_FALSE
 #define ANGLE_PID_RATE_UP                 (0.0f)
 #define ANGLE_PID_RATE_DOWN               (0.0f)
@@ -180,7 +180,7 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
  *       - 此参数影响系统的阻尼特性
  *       - 过大会导致高频振荡,过小响应慢
  */
-#define GYRO_KP                           (13.5f)
+#define GYRO_KP                           (15.5f)
 
 /**
  * @brief 角速度环微分系数
@@ -209,7 +209,7 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
 #define GYRO_PID_I_STEP_MIN               (0.0f)
 #define GYRO_PID_ANTI_WINDUP_ENABLE       PID_TRUE
 #define GYRO_PID_D_MODE                   PID_DERIVATIVE_ON_MEASUREMENT
-#define GYRO_PID_D_LPF_ALPHA              (0.7)
+#define GYRO_PID_D_LPF_ALPHA              (0.4)
 #define GYRO_PID_RATE_LIMIT_ENABLE        PID_FALSE
 #define GYRO_PID_RATE_UP                  (0.0f)
 #define GYRO_PID_RATE_DOWN                (0.0f)
@@ -230,7 +230,7 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
  *       初始值设为 0.0f，需要从 0 开始逐步增加调试
  *       典型范围: 0.1 ~ 5.0
  */
-#define SPEED_KP                          (0.0f)
+#define SPEED_KP                          (0.146f)
 
 /**
  * @brief 速度环积分系数
@@ -260,7 +260,7 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
 //#define SPEED_OUT_MAX             (55.0f)
 //#define SPEED_OUT_MIN             (-25.0f)
 #define SPEED_OUT_MAX                     (35.0f)
-#define SPEED_OUT_MIN                     (-15.0f)
+#define SPEED_OUT_MIN                     (-25.0f)
 /**
  * @brief 速度环积分限幅
  *
@@ -275,7 +275,7 @@ extern float g_Wheel_Speed_Danger_Limit; // 平均速度保护阈值，供菜单
 #define SPEED_PID_I_STEP_MIN              (-0.20f)
 #define SPEED_PID_ANTI_WINDUP_ENABLE      PID_TRUE
 #define SPEED_PID_D_MODE                  PID_DERIVATIVE_ON_MEASUREMENT
-#define SPEED_PID_D_LPF_ALPHA             (1)
+#define SPEED_PID_D_LPF_ALPHA             (0.6f)
 #define SPEED_PID_RATE_LIMIT_ENABLE       PID_FALSE
 #define SPEED_PID_RATE_UP                 (0.0f)
 #define SPEED_PID_RATE_DOWN               (0.0f)

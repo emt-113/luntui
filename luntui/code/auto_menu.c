@@ -65,7 +65,7 @@ static uint8_t g_ro_cache_page = 0xFF;
   static menu_item_t balance_gyro_pid_items[] = {
       {"kp", &balance_gyro_pid.kp, MENU_TYPE_FLOAT, .step.f=0.5, .max.f=500, .min.f=0, .display_num=3, .float_point_num=1, NULL},
       {"Kd", &balance_gyro_pid.kd, MENU_TYPE_FLOAT, .step.f=0.01,  .max.f=10, .min.f=0, .display_num=2, .float_point_num=3, NULL},
-      {"ki", &balance_gyro_pid.ki, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10.0f, .min.f=0.0f, .display_num=2, .float_point_num=3, NULL},
+      {"ki", &balance_gyro_pid.ki, MENU_TYPE_FLOAT, .step.f=0.1f, .max.f=10.0f, .min.f=0.0f, .display_num=2, .float_point_num=3, NULL},
       {"DEAD_0", &DEAD_ZONE, MENU_TYPE_UINT8, .step.u32=5, .max.u32=200, .min.u32=0, .display_num=3, .float_point_num=0, NULL},
       {"PWM_te",     &g_Debug_PWM_temp,   MENU_TYPE_READONLY, MENU_TYPE_INT16, .step.i32=0,   .max.i32=0,      .min.i32=0,      .display_num=4, .float_point_num=1, NULL},
       {"PWM",     &g_Debug_PWM,    MENU_TYPE_READONLY, MENU_TYPE_INT16, .step.i32=0,   .max.i32=0,      .min.i32=0,      .display_num=4, .float_point_num=1, NULL},      
@@ -75,14 +75,14 @@ static uint8_t g_ro_cache_page = 0xFF;
    static menu_item_t balance_angle_pid_items[] = {
       {"kp", &balance_angle_pid.kp, MENU_TYPE_FLOAT, .step.f=0.1, .max.f=200, .min.f=0, .display_num=2, .float_point_num=2, NULL},
       {"Kd", &balance_angle_pid.kd, MENU_TYPE_FLOAT, .step.f=0.01,  .max.f=10, .min.f=0, .display_num=1, .float_point_num=3, NULL},  // ✅ 改为 2 位小数
-      {"ki", &balance_angle_pid.ki, MENU_TYPE_FLOAT, .step.f=0.02f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=3, NULL},
+      {"ki", &balance_angle_pid.ki, MENU_TYPE_FLOAT, .step.f=0.1f, .max.f=100, .min.f=0, .display_num=2, .float_point_num=2, NULL},
       {"outgyr", &g_Debug_Target_Gyro, MENU_TYPE_READONLY,MENU_TYPE_FLOAT, .step.f=0, .max.f=0, .min.f=0, .display_num=3, .float_point_num=1, NULL},
       {"sp_flg", &speed_flag, MENU_TYPE_INT8, .step.i32=1, .max.i32=1, .min.i32=0, .display_num=1, .float_point_num=0, NULL},
       {"State", &g_System_State, MENU_TYPE_INT8, .step.i32=1, .max.i32=1, .min.i32=0, .display_num=1, .float_point_num=0, save_pid_params},
-      {"djSTEP", &MAX_PWM_STEP, MENU_TYPE_INT8, .step.i32=5, .max.i32=60, .min.i32=0, .display_num=2, .float_point_num=0, save_pid_params},
+      {"djSTEP", &MAX_PWM_STEP, MENU_TYPE_INT16, .step.i32=5, .max.i32=400, .min.i32=0, .display_num=4, .float_point_num=1, save_pid_params},
   };
 	  static menu_item_t speed_pid_items[] = {
-	      {"kp", &speed_pid.kp, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=2, NULL},
+	      {"kp", &speed_pid.kp, MENU_TYPE_FLOAT, .step.f=0.002f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=3, NULL},
 	      {"Kd", &speed_pid.kd, MENU_TYPE_FLOAT, .step.f=0.01f,  .max.f=10, .min.f=0, .display_num=1, .float_point_num=2, NULL},
 	      {"ki", &speed_pid.ki, MENU_TYPE_FLOAT, .step.f=0.01f, .max.f=10, .min.f=0, .display_num=1, .float_point_num=2, NULL},
 	      {"Sp_Out", &g_Debug_Speed_Output, MENU_TYPE_READONLY,MENU_TYPE_FLOAT, .step.f=0, .max.f=0, .min.f=0, .display_num=2, .float_point_num=2, NULL},

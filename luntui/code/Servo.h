@@ -51,7 +51,7 @@ void set_servo_duty(serv_control *servo, int16 duty);
 
 void Servo_Control(serv_control *servo, int16 move_num);
 
-void dynamic_steer_control(void);extern int8_t MAX_PWM_STEP;
+void dynamic_steer_control(void);extern int16_t MAX_PWM_STEP;
 void shi();
 void VMC_Update_All_Servos(float gao, float angle);
 

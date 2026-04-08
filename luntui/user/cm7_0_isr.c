@@ -42,9 +42,9 @@ void pit0_ch0_isr()                     // 定时器通道 0 周期中断服务函数
 {
     pit_isr_flag_clear(PIT_CH0);
     uwtick++;
-    if (GyroOffset_init)
+    if (gyro_offset.is_calibrated)
     {
-      ICM_getEulerianAngles(); 
+      imu_read();
       control_run_1ms();
     }
     //陀螺仪解算角度
@@ -144,19 +144,14 @@ void pit0_ch21_isr()                    // 定时器通道 21 周期中断服务函数
 // **************************** 外部中断函数 ****************************
 void gpio_0_exti_isr()                  // 外部 GPIO_0 中断服务函数     
 {
-    
-  
-  
+     
 }
 
 void gpio_1_exti_isr()                  // 外部 GPIO_1 中断服务函数     
 {
     if(exti_flag_get(P01_0))		// 示例P1_0端口外部中断判断
     {
-
-      
-      
-            
+             
     }
     if(exti_flag_get(P01_1))
     {
@@ -204,8 +199,10 @@ void gpio_5_exti_isr()                  // 外部 GPIO_5 中断服务函数
 
 void gpio_6_exti_isr()                  // 外部 GPIO_6 中断服务函数     
 {
-
-
+    if(exti_flag_get(P06_7))
+    {
+        imu660rc_callback();
+    }
 }
 
 void gpio_7_exti_isr()                  // 外部 GPIO_7 中断服务函数     

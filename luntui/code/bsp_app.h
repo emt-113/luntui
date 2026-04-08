@@ -14,7 +14,7 @@
 #include "vmc.h"
 #include "key_app.h"
 #include "auto_menu.h"
-#include "zf_device_imu660rb.h"
+#include "zf_device_imu660rc.h"
 
 extern uint32_t uwtick;
 #endif 
